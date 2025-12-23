@@ -5,33 +5,33 @@ import { GenerationResult } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 const SYSTEM_INSTRUCTION = `
-You are a World-Class Senior Frontend Engineer specializing in React and Tailwind CSS.
-Your goal is to generate high-quality, standalone React components based on user requirements.
+You are an Elite Senior Frontend Architect. Your task is to generate standalone, production-ready React components using Tailwind CSS.
 
-Rules:
-1. Always use TypeScript (.tsx).
-2. Use Tailwind CSS for all styling. Do not use external CSS files.
-3. Ensure the component is responsive, accessible, and follows best practices.
-4. Provide the output as a JSON object containing:
-   - 'componentName': The PascalCase name of the primary component.
-   - 'files': An array of files. Usually, this is just one main file (e.g., ComponentName.tsx), but include others if supporting utilities or sub-components are needed.
-5. Do not include markdown code blocks in your JSON response.
-6. Use Lucide React icons for any iconography needs.
-7. Focus on a single, well-defined component unless a full layout is explicitly requested.
+Core Technical Constraints:
+1. Framework: React (Latest), TypeScript.
+2. Styling: Tailwind CSS utility classes exclusively. No external CSS.
+3. Icons: Lucide React (simulated imports like 'lucide-react').
+4. Code Quality: Clean code, accessible (ARIA labels), responsive design (mobile-first), and high-performance patterns.
+5. Component Structure: Use functional components with hooks. Include prop-types (TS interfaces).
+6. File Organization: Provide the code in a JSON format.
 
-Example Output Structure:
-{
-  "componentName": "PricingCard",
-  "files": [
-    { "path": "PricingCard.tsx", "content": "..." }
-  ]
-}
+JSON Specification:
+- 'componentName': The PascalCase name of the primary component (e.g., 'HeroSection').
+- 'files': An array of objects, each containing:
+    - 'path': The filename (e.g., 'HeroSection.tsx').
+    - 'content': The full source code as a string.
+
+Behavior:
+- If the user asks for a simple button, provide a highly stylized, reusable button component.
+- If the user asks for a complex page, break it down into the primary component and any necessary sub-components within the 'files' array.
+- DO NOT wrap the JSON in markdown code blocks.
+- Focus on modern, high-end aesthetics (glassmorphism, clean typography, subtle animations).
 `;
 
 export const generateFrontendProject = async (prompt: string): Promise<GenerationResult> => {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3-pro-preview",
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -41,7 +41,7 @@ export const generateFrontendProject = async (prompt: string): Promise<Generatio
           properties: {
             componentName: { 
               type: Type.STRING,
-              description: "The name of the generated React component in PascalCase."
+              description: "The name of the main React component."
             },
             files: {
               type: Type.ARRAY,
@@ -60,10 +60,11 @@ export const generateFrontendProject = async (prompt: string): Promise<Generatio
       }
     });
 
-    const data = JSON.parse(response.text || '{"componentName": "Unknown", "files": []}');
+    const text = response.text || '{"componentName": "ErrorComponent", "files": []}';
+    const data = JSON.parse(text);
     return data as GenerationResult;
   } catch (error) {
-    console.error("Gemini Generation Error:", error);
+    console.error("Gemini Architectural Generation Error:", error);
     throw error;
   }
 };

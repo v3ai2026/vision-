@@ -4,10 +4,14 @@ import { GenerationResult, LibraryItem, ModelConfig, GeneratedFile } from "../ty
 
 const DEFAULT_SYSTEM_INSTRUCTION = `你是一个顶级进化级全栈 AI 编排系统（IntelliBuild Studio Core）。
 你的核心开发准则是：
-1. 【极致无障碍 (Accessibility)】：必须使用语义化 HTML5 标签。所有交互组件必须包含完整的 WAI-ARIA 属性。
-2. 【现代 SaaS 架构】：参考 ixartz, async-labs 等顶级 SaaS 模板的目录结构。确保代码是模块化、可扩展的。
-3. 【数据驱动】：如果提供了 [Knowledge Shard]，必须将其中的数据点集成到 UI 的 Mock 数据或初始状态中。
-4. 【性能与美学】：使用 Tailwind CSS。采用“深色奢华 (Luxury Dark)”风格，配合黄金比例布局和微交互。`;
+1. 【极致无障碍 (Accessibility)】：这是最高优先级。所有生成的 React 组件必须遵循 WCAG 2.1 级别 AA 或更高标准。
+2. 【现代 SaaS 架构】：参考 ixartz, async-labs 等顶级 SaaS 模板。确保代码是模块化、类型安全且可扩展的。
+3. 【Vercel 边缘计算优化】：
+   - 对于所有动态逻辑（API 路由），必须默认使用 Vercel Edge Runtime。
+   - 在 API 路由文件中包含：export const runtime = 'edge';
+   - 优化静态资源（SSG/ISR），确保 Next.js 项目结构完全符合 Vercel 自动化构建标准。
+4. 【强制单元测试】：每一个新创建的 React 组件 (.tsx) 都必须配备一个对应的 Vitest 测试文件 (.test.tsx)。
+5. 【深色奢华美学】：使用 Tailwind CSS。采用“深色奢华 (Luxury Dark)”风格，配合黄金比例布局和玻璃拟态效果。`;
 
 export const generateFullStackProject = async (
   prompt: string, 
@@ -21,17 +25,18 @@ export const generateFullStackProject = async (
 
   const enhancedPrompt = `User Intent: ${prompt}
 
-Intelligence Vault Context (Integrated Knowledge):
+Intelligence Vault Context:
 ${vaultContext}
 
 Technical Requirements:
-- Build a production-grade SaaS shard.
-- Follow the structure of modern boilerplates (React/Next.js).
-- Include comprehensive ARIA support.
-- Provide a Vitest suite (.test.tsx) for core logic.`;
+- Build a Next.js project optimized for Vercel.
+- Use Edge Functions for all dynamic backend logic (export const runtime = 'edge').
+- Ensure 100% ARIA compliance.
+- Generate Vitest suites for components.
+- Include a vercel.json if custom routing or headers are required.`;
 
   const genConfig: any = {
-    systemInstruction: `${config.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION}\n\nLibrary reuse protocols:\n${libraryContext}`,
+    systemInstruction: `${config.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION}\n\nLibrary protocols:\n${libraryContext}`,
     responseMimeType: "application/json",
     temperature: config.temperature,
     topP: config.topP,
@@ -81,7 +86,6 @@ Technical Requirements:
   return JSON.parse(response.text || '{}') as GenerationResult;
 };
 
-// ... remaining service functions (convertColab, generateImagePro, etc) remain unchanged
 export const convertToColabNotebook = (files: GeneratedFile[], projectName: string): string => {
   const cells: any[] = [
     {
@@ -91,7 +95,7 @@ export const convertToColabNotebook = (files: GeneratedFile[], projectName: stri
     }
   ];
   files.forEach(file => {
-    cells.push({ cell_type: "markdown", metadata: {}, source: [`## File: \`${file.path}\`\n`] });
+    cells.push({ cell_type: "markdown", metadata: {}, source: [`## File: \`${file.path}\` (\`${file.type}\`)\n`] });
     cells.push({ cell_type: "code", execution_count: null, metadata: {}, outputs: [], source: file.content.split('\n').map(line => line + '\n') });
   });
   return JSON.stringify({ cells, metadata: { kernelspec: { display_name: "Python 3", language: "python", name: "python3" }, language_info: { name: "python", version: "3.8" } }, nbformat: 4, nbformat_minor: 0 }, null, 2);

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 
 /** Available transition protocols for the modal surface entrance */
@@ -16,8 +17,8 @@ interface NeuralModalProps {
   size?: ModalSize;
 }
 
-/** Registry for surface dimensions mapped to Tailwind max-width utility classes */
-const SIZE_REGISTRY: Record<ModalSize, string> = {
+/** Registry for surface dimensions mapped to Tailwind-compatible layout classes */
+const SIZE_CLASSES: Record<ModalSize, string> = {
   sm: 'max-w-md',
   md: 'max-w-2xl',
   lg: 'max-w-4xl',
@@ -25,8 +26,11 @@ const SIZE_REGISTRY: Record<ModalSize, string> = {
   full: 'max-w-[95vw] h-[90vh]',
 };
 
-/** Registry for motion protocols (mapped to custom CSS keyframes defined in index.html) */
-const TRANSITION_REGISTRY: Record<ModalTransition, string> = {
+/** 
+ * Registry for motion protocols. 
+ * Maps transition props to the custom animation classes defined in index.html styles.
+ */
+const TRANSITION_CLASSES: Record<ModalTransition, string> = {
   slide: 'animate-modal-slide',
   fade: 'animate-modal-fade',
   zoom: 'animate-modal-zoom',
@@ -35,8 +39,12 @@ const TRANSITION_REGISTRY: Record<ModalTransition, string> = {
 
 /**
  * NeuralModal: An enterprise-grade, accessible dialogue component.
- * Features centralized transition orchestration, robust focus trapping, and studio aesthetics.
- * Complies with WAI-ARIA Authoring Practices for Dialog (Modal).
+ * Consolidates entrance transition logic and enforces strict focus containment.
+ * 
+ * Features:
+ * - Centralized transition orchestration via `TRANSITION_CLASSES`.
+ * - Robust WAI-ARIA focus trapping and restoration.
+ * - Studio-tier aesthetics with cinematic backdrops.
  */
 export const NeuralModal: React.FC<NeuralModalProps> = ({
   isOpen,
@@ -48,143 +56,120 @@ export const NeuralModal: React.FC<NeuralModalProps> = ({
   size = 'md',
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
-  const triggerSourceRef = useRef<HTMLElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  const activeTransition = useMemo(() => TRANSITION_REGISTRY[transition] || TRANSITION_REGISTRY.fade, [transition]);
-  const activeSize = useMemo(() => SIZE_REGISTRY[size] || SIZE_REGISTRY.md, [size]);
+  const transitionClass = useMemo(() => TRANSITION_CLASSES[transition] || TRANSITION_CLASSES.fade, [transition]);
+  const sizeClass = useMemo(() => SIZE_CLASSES[size] || SIZE_CLASSES.md, [size]);
 
   /** 
-   * Focus Trap Orchestrator:
-   * Prevents focus leakage and ensures keyboard navigation cycle remains 
-   * contained within the modal surface, including the header and footer.
+   * Orchestrates focus containment within the modal boundary.
+   * Ensures the user cannot 'tab' out into the background document.
    */
-  const handleKeyboardInteraction = useCallback((e: KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
       return;
     }
 
     if (e.key === 'Tab' && modalRef.current) {
-      // Find all focusable elements within the modal boundary
       const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-      const focusableElements = Array.from(modalRef.current.querySelectorAll<HTMLElement>(focusableSelector))
+      const focusables = Array.from(modalRef.current.querySelectorAll<HTMLElement>(focusableSelector))
         .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
       
-      if (focusableElements.length === 0) {
+      if (focusables.length === 0) {
         e.preventDefault();
         return;
       }
       
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
 
-      if (e.shiftKey) { 
-        // Backward Tab: wrap to last if on first
-        if (document.activeElement === firstElement || document.activeElement === modalRef.current) {
-          lastElement.focus();
-          e.preventDefault();
-        }
-      } else { 
-        // Forward Tab: wrap to first if on last
-        if (document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === modalRef.current)) {
+        last.focus();
+        e.preventDefault();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        first.focus();
+        e.preventDefault();
       }
     }
   }, [onClose]);
 
   useEffect(() => {
     if (isOpen) {
-      // 1. Capture the element that triggered the modal for focus restoration on close
-      triggerSourceRef.current = document.activeElement as HTMLElement;
-      
-      // 2. Prevent document body overflow to lock scrolling
-      const originalOverflow = document.body.style.overflow;
+      previousFocusRef.current = document.activeElement as HTMLElement;
       document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
       
-      // 3. Register high-level keyboard listener
-      window.addEventListener('keydown', handleKeyboardInteraction);
-      
-      // 4. Set initial focus to the modal surface or the first focusable child
-      const timer = setTimeout(() => {
+      // Allow the animation frame to settle before moving focus
+      const focusTimer = setTimeout(() => {
         if (modalRef.current) {
-          const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-          const firstFocusable = modalRef.current.querySelector<HTMLElement>(focusableSelector);
-          if (firstFocusable) {
-            firstFocusable.focus();
-          } else {
-            modalRef.current.focus();
-          }
+          const firstFocusable = modalRef.current.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+          (firstFocusable || modalRef.current).focus();
         }
-      }, 100);
+      }, 50);
       
       return () => {
-        document.body.style.overflow = originalOverflow;
-        window.removeEventListener('keydown', handleKeyboardInteraction);
-        clearTimeout(timer);
-        
-        // 5. Restore focus to the trigger element
-        if (triggerSourceRef.current) {
-          triggerSourceRef.current.focus();
-        }
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+        clearTimeout(focusTimer);
+        previousFocusRef.current?.focus();
       };
     }
-  }, [isOpen, handleKeyboardInteraction]);
+  }, [isOpen, handleKeyDown]);
 
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-10 overflow-hidden" 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-10" 
       role="presentation"
     >
-      {/* Backdrop Layer: Cinematic veil with high-fidelity blur */}
+      {/* Backdrop: High-fidelity cinematic veil */}
       <div 
-        className="fixed inset-0 bg-black/95 backdrop-blur-3xl animate-backdrop cursor-pointer transition-opacity" 
+        className="fixed inset-0 bg-black/90 backdrop-blur-2xl animate-backdrop cursor-pointer" 
         onClick={onClose} 
         aria-hidden="true" 
       />
 
-      {/* Surface Shard: The primary dialog unit with focus management */}
+      {/* Modal Surface: The primary orchestration unit */}
       <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="neural-modal-title"
+        aria-labelledby="modal-header-title"
         tabIndex={-1}
-        className={`relative w-full ${activeSize} bg-[#121212] border border-[#252525] rounded-[2.5rem] shadow-[0_0_120px_rgba(0,0,0,1)] flex flex-col outline-none overflow-hidden gold-glow border-gold-subtle transform-gpu ${activeTransition}`}
+        className={`relative w-full ${sizeClass} bg-[#121212] border border-[#252525] rounded-[2.5rem] shadow-2xl flex flex-col outline-none overflow-hidden gold-glow border-gold-subtle transform-gpu ${transitionClass}`}
       >
         {/* Header Shard */}
-        <header className="flex items-center justify-between px-10 py-7 border-b border-[#222] bg-black/60 z-10">
-          <h2 id="neural-modal-title" className="text-[12px] font-black text-[#D4AF37] uppercase tracking-[0.4em] leading-none">
+        <header className="flex items-center justify-between px-8 py-6 border-b border-[#222] bg-black/40 z-10">
+          <h2 id="modal-header-title" className="text-[11px] font-black text-[#D4AF37] uppercase tracking-[0.4em] leading-none">
             {title}
           </h2>
           <button 
             onClick={onClose} 
-            className="text-[#555] hover:text-[#D4AF37] transition-all p-2 rounded-xl hover:bg-white/5 outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:ring-offset-2 focus:ring-offset-[#121212]" 
-            aria-label="Close dialogue"
+            className="text-white/30 hover:text-[#D4AF37] transition-all p-2 rounded-xl hover:bg-white/5 outline-none focus:ring-2 focus:ring-[#D4AF37]/50" 
+            aria-label="Dismiss dialogue"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="square">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </header>
 
-        {/* Content Body Shard */}
-        <div className="flex-1 px-10 py-12 text-[15px] font-medium text-[#c0c0c0] leading-relaxed overflow-y-auto custom-scrollbar scroll-smooth">
+        {/* Body Shard */}
+        <div className="flex-1 px-10 py-10 text-[14px] font-medium text-[#c0c0c0] leading-relaxed overflow-y-auto custom-scrollbar">
           {children}
         </div>
 
-        {/* Action Footer Shard: Ensures explicit accessibility for all provided controls */}
-        <footer className="px-10 py-8 border-t border-[#222] bg-black/40 flex justify-end items-center gap-6 z-10">
+        {/* Footer Shard */}
+        <footer className="px-8 py-6 border-t border-[#222] bg-black/40 flex justify-end items-center gap-4 z-10">
           {footer ? footer : (
             <button 
               onClick={onClose} 
-              className="px-12 py-4 bg-gold-gradient text-black text-[12px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl active:scale-95 hover:brightness-110 transition-all outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:ring-offset-2 focus:ring-offset-[#121212]"
+              className="px-8 py-3 bg-gold-gradient text-black text-[11px] font-black uppercase tracking-widest rounded-xl shadow-xl active:scale-95 hover:brightness-110 transition-all outline-none focus:ring-2 focus:ring-[#D4AF37]/50"
             >
-              Acknowledge Sync
+              Continue
             </button>
           )}
         </footer>

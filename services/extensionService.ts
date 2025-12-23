@@ -7,10 +7,10 @@ export const PLUGIN_REGISTRY: Extension[] = [
     name: 'A11y Guardian',
     description: 'Enforces strict WCAG 2.1 compliance during the inference phase.',
     category: 'PROTOCOL',
-    version: '1.0.4',
+    version: '1.0.5',
     author: 'Studio Core',
     enabled: true,
-    manifest: 'Injects [aria-*] and [role] attributes into all interactive nodes.'
+    manifest: 'Injects [aria-*], [role], and semantic HTML5 structures into all component trees. Validates focus-trap logic for dialogues.'
   },
   {
     id: 'vsl-pwa-booster',
@@ -30,17 +30,17 @@ export const PLUGIN_REGISTRY: Extension[] = [
     version: '2.1.0',
     author: 'Studio Core',
     enabled: true,
-    manifest: 'Pre-configures Tailwind with studio-custom design tokens.'
+    manifest: 'Pre-configures Tailwind with studio-custom design tokens and accessible contrast ratios.'
   },
   {
     id: 'vsl-vitest-runner',
     name: 'Vitest Automated',
-    description: 'Generates robust test suites for every created component.',
+    description: 'Generates robust test suites for every created component using @testing-library/react.',
     category: 'COMPILER',
-    version: '1.2.1',
+    version: '1.3.0',
     author: 'Studio Core',
     enabled: true,
-    manifest: 'Targets 90%+ coverage for all React logic.'
+    manifest: 'Mandates a .test.tsx file for every .tsx component. Targets 95%+ coverage for interaction and accessibility attributes.'
   }
 ];
 

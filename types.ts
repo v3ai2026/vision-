@@ -52,6 +52,15 @@ export interface LibraryItem {
   codeSnippet?: string;
 }
 
+export interface AIAgent {
+  id: string;
+  name: string;
+  role: string;
+  model: string;
+  instruction: string;
+  status: 'idle' | 'active' | 'deploying';
+}
+
 export enum TabType {
   INBOX = 'INBOX',
   WORKSPACE = 'WORKSPACE',

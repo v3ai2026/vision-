@@ -75,5 +75,6 @@ export enum TabType {
   GITHUB = 'GITHUB',
   PLUGINS = 'PLUGINS',
   GCS = 'GCS',
-  FIGMA = 'FIGMA'
+  FIGMA = 'FIGMA',
+  DRIVE = 'DRIVE'
 }

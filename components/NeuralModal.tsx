@@ -73,7 +73,6 @@ export const NeuralModal: React.FC<NeuralModalProps> = ({
 
     if (e.key === 'Tab' && modalRef.current) {
       const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-      // Fix: cast to HTMLElement array to avoid 'unknown' type errors and ensure DOM properties like offsetParent are available.
       const elements = Array.from(modalRef.current.querySelectorAll(focusableSelector)) as HTMLElement[];
       const focusables = elements.filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
       
@@ -139,16 +138,16 @@ export const NeuralModal: React.FC<NeuralModalProps> = ({
         aria-modal="true"
         aria-labelledby="modal-header-title"
         tabIndex={-1}
-        className={`relative w-full ${sizeClass} bg-[#121212] border border-[#252525] rounded-[2.5rem] shadow-2xl flex flex-col outline-none overflow-hidden gold-glow border-gold-subtle transform-gpu ${transitionClass}`}
+        className={`relative w-full ${sizeClass} bg-[#020420] border border-[#1a1e43] rounded-[2.5rem] shadow-2xl flex flex-col outline-none overflow-hidden transform-gpu ${transitionClass}`}
       >
         {/* Header Shard */}
-        <header className="flex items-center justify-between px-8 py-6 border-b border-[#222] bg-black/40 z-10">
-          <h2 id="modal-header-title" className="text-[11px] font-black text-[#D4AF37] uppercase tracking-[0.4em] leading-none">
+        <header className="flex items-center justify-between px-8 py-6 border-b border-[#1a1e43] bg-black/40 z-10">
+          <h2 id="modal-header-title" className="text-[11px] font-black text-[#00DC82] uppercase tracking-[0.4em] leading-none">
             {title}
           </h2>
           <button 
             onClick={onClose} 
-            className="text-white/30 hover:text-[#D4AF37] transition-all p-2 rounded-xl hover:bg-white/5 outline-none focus:ring-2 focus:ring-[#D4AF37]/50" 
+            className="text-white/30 hover:text-[#00DC82] transition-all p-2 rounded-xl hover:bg-white/5 outline-none focus:ring-2 focus:ring-[#00DC82]/50" 
             aria-label="Dismiss dialogue"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
@@ -159,16 +158,16 @@ export const NeuralModal: React.FC<NeuralModalProps> = ({
         </header>
 
         {/* Body Shard */}
-        <div className="flex-1 px-10 py-10 text-[14px] font-medium text-[#c0c0c0] leading-relaxed overflow-y-auto custom-scrollbar">
+        <div className="flex-1 px-10 py-10 text-[14px] font-medium text-slate-400 leading-relaxed overflow-y-auto custom-scrollbar">
           {children}
         </div>
 
         {/* Footer Shard */}
-        <footer className="px-8 py-6 border-t border-[#222] bg-black/40 flex justify-end items-center gap-4 z-10">
+        <footer className="px-8 py-6 border-t border-[#1a1e43] bg-black/40 flex justify-end items-center gap-4 z-10">
           {footer ? footer : (
             <button 
               onClick={onClose} 
-              className="px-8 py-3 bg-gold-gradient text-black text-[11px] font-black uppercase tracking-widest rounded-xl shadow-xl active:scale-95 hover:brightness-110 transition-all outline-none focus:ring-2 focus:ring-[#D4AF37]/50"
+              className="px-8 py-3 bg-nuxt-gradient text-black text-[11px] font-black uppercase tracking-widest rounded-xl shadow-xl active:scale-95 hover:brightness-110 transition-all outline-none focus:ring-2 focus:ring-[#00DC82]/50"
             >
               Continue
             </button>

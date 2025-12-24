@@ -5,11 +5,14 @@ import Editor from '@monaco-editor/react';
 import { GoogleGenAI } from "@google/genai";
 import { generateFullStackProject } from './services/geminiService';
 import { deployToVercel, checkDeploymentStatus } from './services/vercelService';
+import { GitHubService } from './services/githubService';
+import { GCSService } from './services/gcsService';
+import { GoogleDriveService } from './services/googleDriveService';
 import { COMPONENT_LIBRARY } from './services/library';
 import { NeuralModal } from './components/NeuralModal';
 import { GeneratedFile, TabType, DeploymentStatus, ModelConfig, GenerationResult, AIAgent } from './types';
 
-const INITIAL_SYSTEM = `你是一个顶级进化级全栈 AI 编排系统（IntelliBuild Studio Core）。你正在操作一个分布式的代理集群。风格：极致简约、企业级、奢华深色、流金。
+const INITIAL_SYSTEM = `你是一个顶级进化级全栈 AI 编排系统（IntelliBuild Studio Core）。你正在操作一个分布式的代理集群。风格：极致简约、企业级、奢华深色、Nuxt 翠绿风格。
 你负责生成高质量的代码、图像和网站。`;
 
 const App: React.FC = () => {
@@ -31,6 +34,33 @@ const App: React.FC = () => {
   const [vercelToken, setVercelToken] = useState('');
   const [isConfigOpen, setIsConfigOpen] = useState(false);
 
+  // --- Google Authentication States ---
+  const [googleUser, setGoogleUser] = useState<any>(null);
+  const [accessToken, setAccessToken] = useState<string>('');
+
+  // --- GitHub Orchestration States ---
+  const [ghToken, setGhToken] = useState('');
+  const [ghRepoName, setGhRepoName] = useState('');
+  const [ghDescription, setGhDescription] = useState('Initialized via IntelliBuild Studio');
+  const [ghIsProvisioning, setGhIsProvisioning] = useState(false);
+  const [ghLogs, setGhLogs] = useState<string[]>([]);
+
+  // --- GCS Orchestration States ---
+  const [gcsProjectId, setGcsProjectId] = useState('');
+  const [gcsBuckets, setGcsBuckets] = useState<any[]>([]);
+  const [gcsObjects, setGcsObjects] = useState<any[]>([]);
+  const [selectedBucket, setSelectedBucket] = useState('');
+  const [gcsIsLoading, setGcsIsLoading] = useState(false);
+  const [gcsLogs, setGcsLogs] = useState<string[]>([]);
+  const [gcsSearch, setGcsSearch] = useState('');
+  const [newBucketName, setNewBucketName] = useState('');
+
+  // --- Google Drive Orchestration States ---
+  const [driveIsLoading, setDriveIsLoading] = useState(false);
+  const [driveLogs, setDriveLogs] = useState<string[]>([]);
+  const [driveFolders, setDriveFolders] = useState<any[]>([]);
+  const [selectedDriveFolder, setSelectedDriveFolder] = useState('');
+
   // --- Website Generation States ---
   const [webPrompt, setWebPrompt] = useState('');
   const [isWebGenLoading, setIsWebGenLoading] = useState(false);
@@ -44,12 +74,62 @@ const App: React.FC = () => {
 
   // --- Agent Manager State ---
   const [agents, setAgents] = useState<AIAgent[]>([
-    { id: '1', name: 'Architect-Prime', role: 'System Orchestrator', model: 'gemini-3-pro-preview', instruction: 'Primary architecture strategy.', status: 'active' },
-    { id: '2', name: 'UI-Refiner', role: 'Aesthetic Specialist', model: 'gemini-3-flash-preview', instruction: 'Ensures Luxury Dark and Gold aesthetics.', status: 'idle' }
+    { id: '1', name: 'Nuxt-Architect', role: 'System Orchestrator', model: 'gemini-3-pro-preview', instruction: 'Primary architecture strategy focused on performance and modern green aesthetics.', status: 'active' },
+    { id: '2', name: 'Vibrant-UI', role: 'Aesthetic Specialist', model: 'gemini-3-flash-preview', instruction: 'Ensures Nuxt Green and Deep Navy aesthetics.', status: 'idle' }
   ]);
-  const [newAgent, setNewAgent] = useState<Partial<AIAgent>>({ model: 'gemini-3-flash-preview' });
 
-  // Update Preview for Website Gen when generatedHtml changes or tab switches
+  // Google OAuth Initialization
+  useEffect(() => {
+    // @ts-ignore
+    if (window.google) {
+      // @ts-ignore
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: '439600021319-33on7g6a29g3r6poh8t1v4p0a3b04c0r.apps.googleusercontent.com', // Placeholder Client ID
+        scope: 'openid profile email https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/devstorage.full_control',
+        callback: (response: any) => {
+          if (response.access_token) {
+            setAccessToken(response.access_token);
+            fetchUserInfo(response.access_token);
+          }
+        },
+      });
+      // Store client in a ref or local if needed for recurring requests
+    }
+  }, []);
+
+  const handleGoogleLogin = () => {
+    // @ts-ignore
+    const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: '439600021319-33on7g6a29g3r6poh8t1v4p0a3b04c0r.apps.googleusercontent.com',
+        scope: 'openid profile email https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/devstorage.full_control',
+        callback: (response: any) => {
+          if (response.access_token) {
+            setAccessToken(response.access_token);
+            fetchUserInfo(response.access_token);
+          }
+        },
+      });
+    client.requestAccessToken();
+  };
+
+  const fetchUserInfo = async (token: string) => {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.ok ? await res.json() : null;
+      setGoogleUser(data);
+    }
+  };
+
+  // Sync suggestion
+  useEffect(() => {
+    if (generationResult && !ghRepoName) {
+      setGhRepoName(generationResult.projectName.toLowerCase().replace(/\s+/g, '-'));
+    }
+  }, [generationResult]);
+
+  // Update Preview for Website Gen
   useEffect(() => {
     if (generatedHtml && previewRef.current && activeTab === TabType.WEBSITE_GEN) {
       const doc = previewRef.current.contentDocument;
@@ -61,7 +141,7 @@ const App: React.FC = () => {
     }
   }, [generatedHtml, activeTab]);
 
-  // Deployment Polling logic
+  // Deployment Polling
   useEffect(() => {
     let interval: number;
     if (deployStatus && (deployStatus.state !== 'READY' && deployStatus.state !== 'ERROR')) {
@@ -76,6 +156,138 @@ const App: React.FC = () => {
     }
     return () => clearInterval(interval);
   }, [deployStatus, vercelToken]);
+
+  const addGhLog = (msg: string) => setGhLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+  const addGcsLog = (msg: string) => setGcsLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+  const addDriveLog = (msg: string) => setDriveLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+
+  const handleGitHubSync = async () => {
+    if (!ghToken || !ghRepoName || !generationResult) return;
+    setGhIsProvisioning(true);
+    setGhLogs([]);
+    addGhLog("Initiating SCM Provisioning Protocol...");
+    try {
+      const ghService = new GitHubService(ghToken);
+      const repo = await ghService.provisionProject(ghRepoName, ghDescription);
+      addGhLog(`Repository verified: ${repo.html_url}`);
+      await ghService.pushAtomicUpdate(repo.owner.login, ghRepoName, generationResult.files);
+      addGhLog("Synchronization complete.");
+    } catch (error: any) {
+      addGhLog(`PROTOCOL ERROR: ${error.message}`);
+    } finally {
+      setGhIsProvisioning(false);
+    }
+  };
+
+  // --- GCS Handlers ---
+  const handleGCSFetchBuckets = async () => {
+    if (!accessToken || !gcsProjectId) {
+      alert("Google Login and Project ID required.");
+      return;
+    }
+    setGcsIsLoading(true);
+    addGcsLog(`Querying Projects for ${gcsProjectId}...`);
+    try {
+      const gcsService = new GCSService(accessToken);
+      const buckets = await gcsService.listBuckets(gcsProjectId);
+      setGcsBuckets(buckets);
+      addGcsLog(`Discovered ${buckets.length} buckets.`);
+    } catch (error: any) {
+      addGcsLog(`FETCH ERROR: ${error.message}`);
+    } finally {
+      setGcsIsLoading(false);
+    }
+  };
+
+  /**
+   * Orchestrates the creation of a new Cloud Storage bucket.
+   */
+  const handleGCSCreateBucket = async () => {
+    if (!accessToken || !gcsProjectId || !newBucketName) return;
+    setGcsIsLoading(true);
+    addGcsLog(`Provisioning new bucket: ${newBucketName}...`);
+    try {
+      const gcsService = new GCSService(accessToken);
+      await gcsService.createBucket(gcsProjectId, newBucketName);
+      addGcsLog(`Bucket ${newBucketName} created successfully.`);
+      setNewBucketName('');
+      await handleGCSFetchBuckets();
+    } catch (error: any) {
+      addGcsLog(`CREATION ERROR: ${error.message}`);
+    } finally {
+      setGcsIsLoading(false);
+    }
+  };
+
+  /**
+   * Indexes objects within a selected GCS bucket.
+   */
+  const handleGCSFetchObjects = async (bucketName: string) => {
+    if (!accessToken || !bucketName) return;
+    setGcsIsLoading(true);
+    addGcsLog(`Scanning objects in ${bucketName}...`);
+    try {
+      const gcsService = new GCSService(accessToken);
+      const objects = await gcsService.listObjects(bucketName);
+      setGcsObjects(objects);
+      addGcsLog(`Indexed ${objects.length} objects.`);
+    } catch (error: any) {
+      addGcsLog(`INDEX ERROR: ${error.message}`);
+    } finally {
+      setGcsIsLoading(false);
+    }
+  };
+
+  const handleGCSUpload = async () => {
+    if (!accessToken || !selectedBucket || !generationResult) return;
+    setGcsIsLoading(true);
+    addGcsLog(`Syncing to GCS bucket: ${selectedBucket}...`);
+    try {
+      const gcsService = new GCSService(accessToken);
+      await gcsService.uploadProject(selectedBucket, generationResult.files, generationResult.projectName.toLowerCase().replace(/\s+/g, '-'));
+      addGcsLog(`GCS Upload Successful.`);
+      await handleGCSFetchObjects(selectedBucket);
+    } catch (error: any) {
+      addGcsLog(`UPLOAD ERROR: ${error.message}`);
+    } finally {
+      setGcsIsLoading(false);
+    }
+  };
+
+  // --- Drive Handlers ---
+  const handleDriveFetchFolders = async () => {
+    if (!accessToken) {
+      alert("Please login with Google first.");
+      return;
+    }
+    setDriveIsLoading(true);
+    addDriveLog("Connecting to Google Drive Intelligence...");
+    try {
+      const driveService = new GoogleDriveService(accessToken);
+      const folders = await driveService.listFolders();
+      setDriveFolders(folders);
+      addDriveLog(`Indexed ${folders.length} Drive folders.`);
+    } catch (error: any) {
+      addDriveLog(`DRIVE ERROR: ${error.message}`);
+    } finally {
+      setDriveIsLoading(false);
+    }
+  };
+
+  const handleDriveSync = async () => {
+    if (!accessToken || !generationResult) return;
+    setDriveIsLoading(true);
+    addDriveLog(`Pushing shards to Google Drive: ${generationResult.projectName}...`);
+    try {
+      const driveService = new GoogleDriveService(accessToken);
+      await driveService.syncProject(generationResult.projectName, generationResult.files, selectedDriveFolder || undefined);
+      addDriveLog("Cloud Drive Synchronization Complete.");
+    } catch (error: any) {
+      addDriveLog(`SYNC ERROR: ${error.message}`);
+    } finally {
+      setDriveIsLoading(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!input) return;
@@ -94,108 +306,94 @@ const App: React.FC = () => {
     }
   };
 
-  const handleWebGen = async () => {
-    if (!webPrompt) return;
-    setIsWebGenLoading(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Generate a single professional, modern, responsive HTML file for a website with the following description: "${webPrompt}". 
-        The design MUST use Tailwind CSS (CDN link) and have a "Luxury Dark" aesthetic: deep black background (#050505), gold accents (#D4AF37), and white/silver text. 
-        Include advanced layouts like Bento grids, glassmorphism, and smooth hover effects. 
-        Return ONLY the HTML content, no markdown blocks.`,
-        config: {
-          systemInstruction: "You are an expert frontend developer specializing in luxury dark web designs."
-        }
-      });
-      
-      const text = response.text || '';
-      // Clean possible markdown wrappers if model ignores instruction
-      const cleaned = text.replace(/^```html\n?/, '').replace(/\n?```$/, '').trim();
-      setGeneratedHtml(cleaned);
-    } catch (error) {
-      console.error('Web Gen failed:', error);
-    } finally {
-      setIsWebGenLoading(false);
-    }
-  };
-
-  const handleDownloadHtml = () => {
-    if (!generatedHtml) return;
-    const blob = new Blob([generatedHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `intelli-site-${Date.now()}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImageGen = async () => {
-    if (!imagePrompt) return;
-    setIsImageGenerating(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: [{ parts: [{ text: `A high-end luxury dark product shot with cinematic gold lighting: ${imagePrompt}` }] }],
-        config: { imageConfig: { aspectRatio: "16:9" } }
-      });
-      
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          setGeneratedImageUrl(`data:image/png;base64,${part.inlineData.data}`);
-          break;
-        }
-      }
-    } catch (error) {
-      console.error('Image Gen failed:', error);
-      alert('Visual artifact synthesis protocol failed. Check system logs.');
-    } finally {
-      setIsImageGenerating(false);
-    }
-  };
-
+  /**
+   * Triggers the Vercel deployment pipeline for the current project shards.
+   */
   const handleDeploy = async () => {
-    if (!generationResult || !vercelToken) return;
+    if (!generationResult) {
+      alert("No project generated to deploy.");
+      return;
+    }
+    if (!vercelToken) {
+      setActiveTab(TabType.DEPLOY);
+      alert("Please provide a Vercel API token in the Deploy tab.");
+      return;
+    }
     setIsDeploying(true);
     try {
       const status = await deployToVercel(generationResult.files, vercelToken, generationResult.projectName);
       setDeployStatus(status);
+      setActiveTab(TabType.DEPLOY);
     } catch (error: any) {
-      alert(`Deployment Pipeline Interrupted: ${error.message}`);
+      console.error('Deployment failed:', error);
+      alert(`Deployment failed: ${error.message}`);
     } finally {
       setIsDeploying(false);
     }
   };
 
+  /**
+   * Generates visual artifacts using the Gemini 2.5 Flash Image model.
+   */
+  const handleImageGen = async () => {
+    if (!imagePrompt) return;
+    setIsImageGenerating(true);
+    setGeneratedImageUrl(null);
+    try {
+      // @google/genai: Always initialize with apiKey from process.env.API_KEY
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [{ text: imagePrompt }],
+        },
+      });
+      
+      const candidate = response.candidates?.[0];
+      if (candidate?.content?.parts) {
+        for (const part of candidate.content.parts) {
+          // Find the image part as per @google/genai guidelines
+          if (part.inlineData) {
+            const base64EncodeString = part.inlineData.data;
+            setGeneratedImageUrl(`data:image/png;base64,${base64EncodeString}`);
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Image generation failed:', error);
+    } finally {
+      setIsImageGenerating(false);
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-[#050505] text-white font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#020420] text-white font-sans overflow-hidden">
       {/* Side Navigation */}
-      <nav className="w-24 border-r border-[#1a1a1a] flex flex-col items-center py-12 gap-10 bg-[#080808] z-30 shadow-2xl">
+      <nav className="w-24 border-r border-[#1a1e43] flex flex-col items-center py-12 gap-10 bg-[#020420] z-30 shadow-2xl">
         <div 
-          className="w-14 h-14 rounded-2xl bg-gold-gradient shadow-[0_0_25px_rgba(212,175,55,0.4)] flex items-center justify-center text-black font-black text-2xl mb-4 cursor-pointer hover:scale-110 transition-transform active:scale-95"
+          className="w-14 h-14 rounded-2xl bg-nuxt-gradient shadow-[0_0_25px_rgba(0,220,130,0.4)] flex items-center justify-center text-black font-black text-2xl mb-4 cursor-pointer hover:scale-110 transition-transform active:scale-95"
           onClick={() => setActiveTab(TabType.WORKSPACE)}
         >
-          S
+          N
         </div>
         {[
           { type: TabType.WORKSPACE, icon: '🏠', label: 'Studio' },
           { type: TabType.WEBSITE_GEN, icon: '🎨', label: 'Web Gen' },
           { type: TabType.IMAGE_GEN, icon: '🖼️', label: 'Artifacts' },
           { type: TabType.EDITOR, icon: '📂', label: 'Editor' },
+          { type: TabType.GITHUB, icon: '🐙', label: 'GitHub' },
+          { type: TabType.GCS, icon: '☁️', label: 'GCS' },
+          { type: TabType.DRIVE, icon: '📂', label: 'Drive' },
           { type: TabType.AGENT_MANAGER, icon: '🤖', label: 'Agents' },
           { type: TabType.DEPLOY, icon: '🚀', label: 'Deploy' },
         ].map((item) => (
           <button 
             key={item.type}
             onClick={() => setActiveTab(item.type)} 
-            className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative group ${activeTab === item.type ? 'text-[#D4AF37]' : 'text-gray-600 hover:text-white'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative group ${activeTab === item.type ? 'text-[#00DC82]' : 'text-gray-600 hover:text-white'}`}
           >
-            <div className={`p-4 rounded-2xl transition-all ${activeTab === item.type ? 'bg-white/10 shadow-inner' : 'hover:bg-white/5'}`}>
+            <div className={`p-4 rounded-2xl transition-all ${activeTab === item.type ? 'bg-[#00DC82]/10 shadow-inner' : 'hover:bg-white/5'}`}>
               <span className="text-2xl">{item.icon}</span>
             </div>
             <span className="text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">{item.label}</span>
@@ -205,47 +403,65 @@ const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        <header className="h-20 border-b border-[#1a1a1a] flex items-center justify-between px-12 bg-[#050505]/95 backdrop-blur-3xl z-20">
+        <header className="h-20 border-b border-[#1a1e43] flex items-center justify-between px-12 bg-[#020420]/95 backdrop-blur-3xl z-20">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#D4AF37] animate-pulse shadow-[0_0_8px_#D4AF37]" />
-              <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.5em]">System Core: {activeTab}</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-[#00DC82] animate-pulse shadow-[0_0_8px_#00DC82]" />
+              <span className="text-[10px] font-black text-[#00DC82] uppercase tracking-[0.5em]">System Core: {activeTab}</span>
             </div>
             <div className="h-4 w-px bg-white/10" />
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
               {generationResult ? `Project: ${generationResult.projectName}` : 'Standby Mode'}
             </span>
           </div>
-          <button 
-            onClick={() => setIsConfigOpen(true)} 
-            className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black tracking-[0.3em] uppercase hover:bg-gold-gradient hover:text-black transition-all shadow-xl"
-          >
-            Parameters
-          </button>
+          
+          <div className="flex items-center gap-6">
+            {googleUser ? (
+              <div className="flex items-center gap-4 px-4 py-2 bg-white/5 border border-white/10 rounded-2xl">
+                <img src={googleUser.picture} className="w-8 h-8 rounded-full border border-[#00DC82]/30" alt="Avatar" />
+                <div className="hidden md:block">
+                  <div className="text-[10px] font-black uppercase text-[#00DC82] tracking-widest">Authenticated</div>
+                  <div className="text-[11px] font-bold text-slate-300">{googleUser.name}</div>
+                </div>
+              </div>
+            ) : (
+              <button 
+                onClick={handleGoogleLogin}
+                className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black tracking-[0.2em] uppercase hover:bg-white/10 transition-all flex items-center gap-3"
+              >
+                <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-4 h-4" />
+                Login with Google
+              </button>
+            )}
+            <button 
+              onClick={() => setIsConfigOpen(true)} 
+              className="px-6 py-2.5 rounded-xl bg-nuxt-gradient text-black text-[10px] font-black tracking-[0.3em] uppercase shadow-xl hover:scale-105 transition-all"
+            >
+              Parameters
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-hidden relative">
-          {/* Subtle Grid Background */}
-          <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#D4AF37 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+          <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#00DC82 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
           {activeTab === TabType.WORKSPACE && (
             <div className="h-full flex flex-col items-center justify-center p-10 max-w-5xl mx-auto text-center gap-16 animate-modal-fade relative z-10">
               <div className="space-y-6">
-                <h1 className="text-[10rem] leading-none font-black tracking-tighter text-gold drop-shadow-[0_0_30px_rgba(212,175,55,0.2)]">IntelliBuild</h1>
-                <p className="text-gray-500 text-[12px] font-black tracking-[1.2em] uppercase">The Architect of Digital Evolution</p>
+                <h1 className="text-[10rem] leading-none font-black tracking-tighter text-nuxt drop-shadow-[0_0_30px_rgba(0,220,130,0.2)]">IntelliBuild</h1>
+                <p className="text-slate-500 text-[12px] font-black tracking-[1.2em] uppercase">Enterprise Agent Orchestration</p>
               </div>
               <div className="w-full relative group max-w-4xl">
-                <div className="absolute -inset-2 bg-gold-gradient opacity-10 blur-3xl group-focus-within:opacity-30 transition-all rounded-[4rem]" />
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Describe your Next.js Full-Stack evolution..."
-                  className="relative w-full h-72 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[3.5rem] p-14 text-2xl outline-none focus:border-[#D4AF37]/50 transition-all resize-none shadow-2xl placeholder:text-gray-800 font-medium custom-scrollbar"
+                  className="relative w-full h-72 bg-[#03062c] border border-[#1a1e43] rounded-[3.5rem] p-14 text-2xl outline-none focus:border-[#00DC82]/50 transition-all shadow-2xl placeholder:text-slate-800 font-medium custom-scrollbar"
                 />
                 <button
                   onClick={handleGenerate}
                   disabled={isGenerating}
-                  className="absolute bottom-12 right-12 px-16 py-6 bg-gold-gradient text-black rounded-2xl font-black text-[14px] tracking-[0.2em] uppercase shadow-[0_0_40px_rgba(212,175,55,0.5)] active:scale-95 transition-all disabled:opacity-50"
+                  className="absolute bottom-12 right-12 px-16 py-6 bg-nuxt-gradient text-black rounded-2xl font-black text-[14px] tracking-[0.2em] uppercase shadow-[0_0_40px_rgba(0,220,130,0.5)] active:scale-95 transition-all disabled:opacity-50"
                 >
                   {isGenerating ? 'Synthesizing...' : 'Initialize Build'}
                 </button>
@@ -253,247 +469,220 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === TabType.WEBSITE_GEN && (
-            <div className="h-full flex animate-modal-fade">
-              <div className="w-[30rem] border-r border-[#1a1a1a] p-12 flex flex-col gap-12 bg-[#080808] overflow-y-auto custom-scrollbar shadow-2xl">
-                <div className="space-y-4">
-                  <h2 className="text-4xl font-black tracking-tight text-gold uppercase">Web Factory</h2>
-                  <p className="text-[10px] font-black text-gray-600 tracking-[0.5em] uppercase leading-relaxed">Visual Site Synthesis Protocol</p>
-                </div>
-                <div className="space-y-8">
-                  <div className="space-y-3">
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest px-2">Prompt Specification</label>
-                    <textarea 
-                      value={webPrompt}
-                      onChange={(e) => setWebPrompt(e.target.value)}
-                      placeholder="Describe your website (e.g. Modern landing page for a luxury coffee brand)..."
-                      className="w-full h-56 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[2rem] p-8 text-sm outline-none focus:border-[#D4AF37]/50 transition-all resize-none shadow-inner"
-                    />
-                  </div>
-                  <button 
-                    onClick={handleWebGen}
-                    disabled={isWebGenLoading}
-                    className="w-full py-6 bg-gold-gradient text-black font-black uppercase tracking-[0.3em] text-[12px] rounded-2xl shadow-2xl hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    {isWebGenLoading ? 'Generating Shard...' : 'Start Generating'}
-                  </button>
-                  {generatedHtml && (
-                    <button 
-                      onClick={handleDownloadHtml}
-                      className="w-full py-5 bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-[11px] rounded-2xl hover:bg-white/10 transition-all flex items-center justify-center gap-3"
-                    >
-                      <span>📥</span> Download Site Artifact
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 bg-black p-12 flex flex-col">
-                <div className="flex-1 rounded-[3rem] border border-[#1a1a1a] overflow-hidden bg-white shadow-[0_0_100px_rgba(0,0,0,0.8)] relative group">
-                  {generatedHtml ? (
-                    <iframe 
-                      ref={previewRef}
-                      title="Site Preview"
-                      className="w-full h-full border-none"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0a0a] gap-6">
-                      <div className="w-20 h-20 border-2 border-dashed border-[#D4AF37]/30 rounded-full animate-spin flex items-center justify-center">
-                        <div className="w-4 h-4 bg-[#D4AF37] rounded-full" />
+          {activeTab === TabType.DRIVE && (
+            <div className="h-full flex flex-col p-12 gap-8 animate-modal-fade overflow-y-auto custom-scrollbar max-w-[1400px] mx-auto">
+               <div className="flex flex-col items-center text-center gap-4 mb-8">
+                 <h2 className="text-7xl font-black tracking-tighter uppercase text-[#00DC82]">Drive Intelligence</h2>
+                 <p className="text-[12px] font-black text-slate-500 tracking-[1em] uppercase">Cloud Drive Synchronization Protocol</p>
+               </div>
+               
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 h-full">
+                  <div className="p-12 bg-[#03062c] border border-[#1a1e43] rounded-[4rem] space-y-10 shadow-2xl flex flex-col">
+                    <div className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em] mb-4">Orchestration Setup</div>
+                    
+                    {!googleUser ? (
+                      <div className="flex-1 flex flex-col items-center justify-center gap-8 py-20 text-center">
+                        <div className="text-5xl opacity-20">🔐</div>
+                        <p className="text-slate-500 font-medium">Authentication required to access Drive Shards.</p>
+                        <button onClick={handleGoogleLogin} className="px-10 py-5 bg-nuxt-gradient text-black font-black uppercase tracking-widest rounded-2xl">Connect Google Account</button>
                       </div>
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.5em]">Waiting for Web Artifact Generation...</p>
+                    ) : (
+                      <>
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Target Cloud Directory</label>
+                          <div className="flex gap-4">
+                            <select 
+                              value={selectedDriveFolder} 
+                              onChange={e => setSelectedDriveFolder(e.target.value)}
+                              className="flex-1 bg-[#020420] border border-[#1a1e43] rounded-2xl px-8 py-5 text-sm outline-none focus:border-[#00DC82]/50 appearance-none"
+                            >
+                              <option value="">Root Drive (/) </option>
+                              {driveFolders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                            </select>
+                            <button onClick={handleDriveFetchFolders} className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Refresh</button>
+                          </div>
+                        </div>
+
+                        <div className="pt-10 border-t border-white/5 flex flex-col gap-6">
+                           <div className="flex items-center justify-between px-2">
+                             <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Shard Integrity</div>
+                             <div className="text-[10px] font-bold text-[#00DC82]">{generationResult?.files.length || 0} Files Detected</div>
+                           </div>
+                           <button 
+                             onClick={handleDriveSync}
+                             disabled={driveIsLoading || !generationResult}
+                             className="w-full py-8 bg-nuxt-gradient text-black font-black uppercase tracking-[0.3em] text-[13px] rounded-[2.5rem] shadow-2xl hover:scale-[1.02] transition-all disabled:opacity-30"
+                           >
+                             {driveIsLoading ? 'Syncing...' : 'Start Cloud Sync'}
+                           </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="p-10 bg-[#020420] border border-[#1a1e43] rounded-[4rem] shadow-2xl flex flex-col overflow-hidden">
+                    <div className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em] border-b border-white/5 pb-6 mb-6">Drive Protocol Stream</div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar font-mono text-[12px] space-y-4 pr-4">
+                       {driveLogs.length === 0 ? <div className="text-slate-800 italic opacity-40">Ready for synchronization...</div> : driveLogs.map((log, i) => <div key={i} className={log.includes('ERROR') ? 'text-red-400' : 'text-[#00DC82]'}>{log}</div>)}
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+               </div>
             </div>
           )}
 
-          {activeTab === TabType.IMAGE_GEN && (
-            <div className="h-full flex flex-col items-center justify-center p-24 animate-modal-fade max-w-5xl mx-auto gap-16">
-               <div className="text-center space-y-6">
-                 <h2 className="text-7xl font-black tracking-tighter uppercase text-gold drop-shadow-xl">Visual Artifacts</h2>
-                 <p className="text-[11px] font-black text-gray-600 tracking-[0.8em] uppercase">Imagen Protocol v4.0</p>
+          {activeTab === TabType.GCS && (
+            <div className="h-full flex flex-col p-12 gap-8 animate-modal-fade overflow-y-auto custom-scrollbar">
+               <div className="flex flex-col items-center text-center gap-4 mb-8">
+                 <h2 className="text-7xl font-black tracking-tighter uppercase text-[#00DC82]">Cloud Orchestration</h2>
+                 <p className="text-[12px] font-black text-slate-500 tracking-[1em] uppercase leading-relaxed">GCS Enterprise Asset Management Protocol</p>
                </div>
-               <div className="w-full flex gap-6 p-2 bg-[#0a0a0a] border border-[#1a1a1a] rounded-[2.5rem] shadow-2xl focus-within:border-[#D4AF37]/30 transition-all">
-                 <input 
-                   type="text" 
-                   value={imagePrompt}
-                   onChange={e => setImagePrompt(e.target.value)}
-                   placeholder="Describe the aesthetic artifact..."
-                   className="flex-1 bg-transparent px-10 py-6 text-xl outline-none placeholder:text-gray-800"
-                 />
-                 <button 
-                   onClick={handleImageGen}
-                   disabled={isImageGenerating}
-                   className="px-14 py-6 bg-gold-gradient text-black font-black uppercase tracking-widest text-[13px] rounded-3xl shadow-2xl active:scale-95 transition-all"
-                 >
-                   {isImageGenerating ? 'Synthesizing...' : 'Generate'}
-                 </button>
-               </div>
-               {generatedImageUrl ? (
-                 <div className="w-full rounded-[4rem] border border-[#1a1a1a] overflow-hidden shadow-[0_0_100px_rgba(212,175,55,0.1)] aspect-video bg-black flex items-center justify-center relative group">
-                    <img src={generatedImageUrl} alt="Generated Artifact" className="max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-105" />
-                    <div className="absolute bottom-10 left-10 p-4 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">
-                      High Fidelity Synthesis
+               
+               <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 max-w-[1700px] mx-auto w-full h-full min-h-[650px]">
+                 <div className="p-10 bg-[#03062c] border border-[#1a1e43] rounded-[3.5rem] space-y-10 shadow-2xl flex flex-col h-fit">
+                    {!googleUser ? (
+                       <div className="text-center py-10 space-y-6">
+                         <div className="text-4xl opacity-20">☁️</div>
+                         <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Connect Google to manage Cloud Shards</p>
+                         <button onClick={handleGoogleLogin} className="w-full py-4 bg-nuxt-gradient text-black font-black uppercase rounded-2xl">Connect</button>
+                       </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-2">Project Identifier</label>
+                          <div className="flex gap-3">
+                            <input type="text" value={gcsProjectId} onChange={e => setGcsProjectId(e.target.value)} className="flex-1 bg-[#020420] border border-[#1a1e43] rounded-2xl px-6 py-4 text-xs outline-none focus:border-[#00DC82]/50" placeholder="my-gcp-project" />
+                            <button onClick={handleGCSFetchBuckets} disabled={gcsIsLoading || !gcsProjectId} className="px-5 py-2 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Scan</button>
+                          </div>
+                        </div>
+
+                        <div className="pt-8 border-t border-white/5 space-y-6">
+                          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Bucket Provisioning</div>
+                          <div className="flex gap-3">
+                            <input type="text" value={newBucketName} onChange={e => setNewBucketName(e.target.value)} placeholder="new-bucket-alias" className="flex-1 bg-[#020420] border border-[#1a1e43] rounded-2xl px-6 py-4 text-xs outline-none focus:border-[#00DC82]/50" />
+                            <button onClick={handleGCSCreateBucket} disabled={gcsIsLoading || !newBucketName} className="px-5 py-2 bg-[#00DC82] text-black rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-all">Create</button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                 </div>
+
+                 <div className="lg:col-span-3 flex flex-col gap-8 h-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="p-8 bg-[#03062c] border border-[#1a1e43] rounded-[3rem] shadow-xl flex flex-col gap-4">
+                          <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Active Bucket Target</div>
+                          <select 
+                            value={selectedBucket} 
+                            onChange={e => {
+                              setSelectedBucket(e.target.value);
+                              handleGCSFetchObjects(e.target.value);
+                            }} 
+                            className="w-full bg-[#020420] border border-[#1a1e43] rounded-2xl px-6 py-4 text-xs outline-none focus:border-[#00DC82]/50"
+                          >
+                            <option value="">Select deployment target...</option>
+                            {gcsBuckets.map(b => <option key={b.id} value={b.name}>{b.name} ({b.location})</option>)}
+                          </select>
+                          <button 
+                            onClick={handleGCSUpload}
+                            disabled={gcsIsLoading || !selectedBucket || !generationResult}
+                            className="mt-2 w-full py-4 bg-nuxt-gradient text-black font-black uppercase tracking-[0.3em] text-[10px] rounded-2xl shadow-xl hover:scale-[1.02] transition-all disabled:opacity-30"
+                          >
+                            {gcsIsLoading ? 'Synchronizing Shards...' : 'Deploy Project Shards to GCS'}
+                          </button>
+                       </div>
+                    </div>
+
+                    <div className="flex-1 p-10 bg-[#020420] border border-[#1a1e43] rounded-[4rem] shadow-2xl overflow-hidden flex flex-col relative">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+                           {gcsObjects.length === 0 ? (
+                             <div className="h-full flex flex-col items-center justify-center text-slate-700 gap-6 opacity-30">
+                                <div className="text-8xl">📦</div>
+                                <div className="text-[12px] font-black uppercase tracking-[0.6em] text-center">No objects found in current namespace</div>
+                             </div>
+                           ) : (
+                             gcsObjects.map((obj) => (
+                               <div key={obj.id} className="flex items-center justify-between p-5 bg-[#03062c]/40 border border-white/5 rounded-[2rem] group hover:border-[#00DC82]/20 hover:bg-[#03062c]/80 transition-all">
+                                  <div className="flex items-center gap-6">
+                                    <div className="w-11 h-11 rounded-2xl bg-white/5 flex items-center justify-center text-lg">📄</div>
+                                    <div className="space-y-1">
+                                      <div className="text-sm font-bold text-slate-300 group-hover:text-[#00DC82] transition-colors">{obj.name}</div>
+                                      <div className="flex items-center gap-4 text-[9px] font-mono text-slate-500 uppercase tracking-tighter">
+                                        <span>Size: {(parseInt(obj.size) / 1024).toFixed(2)} KB</span>
+                                        <span>Updated: {new Date(obj.updated).toLocaleDateString()}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                               </div>
+                             ))
+                           )}
+                        </div>
                     </div>
                  </div>
-               ) : (
-                 <div className="w-full aspect-video border border-dashed border-[#1a1a1a] rounded-[4rem] flex items-center justify-center bg-white/[0.01]">
-                    <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Artifact Display Port Standby</span>
-                 </div>
-               )}
+               </div>
             </div>
           )}
 
           {activeTab === TabType.EDITOR && generationResult && (
             <div className="h-full flex animate-modal-fade">
-              <div className="w-96 border-r border-[#1a1a1a] bg-[#080808] overflow-y-auto custom-scrollbar shadow-2xl">
-                <div className="p-10 text-[10px] font-black text-gray-600 uppercase tracking-[0.4em] border-b border-[#1a1a1a]">Project Shards</div>
-                <div className="py-6">
+              <div className="w-96 border-r border-[#1a1e43] bg-[#020420] flex flex-col shadow-2xl">
+                <div className="p-10 text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] border-b border-[#1a1e43]">Project Shards</div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar py-6">
                   {generationResult.files.map(file => (
-                    <button 
-                      key={file.path} 
-                      onClick={() => setSelectedFile(file)} 
-                      className={`w-full text-left px-12 py-6 text-[11px] font-bold border-l-4 transition-all flex items-center justify-between ${selectedFile?.path === file.path ? 'bg-[#D4AF37]/5 border-[#D4AF37] text-[#D4AF37]' : 'border-transparent text-gray-500 hover:text-white hover:bg-white/5'}`}
-                    >
-                      <span className="truncate">{file.path.split('/').pop()}</span>
-                      <span className="text-[8px] opacity-40">{file.type}</span>
+                    <button key={file.path} onClick={() => setSelectedFile(file)} className={`w-full text-left px-12 py-6 text-[11px] font-bold border-l-4 transition-all ${selectedFile?.path === file.path ? 'bg-[#00DC82]/5 border-[#00DC82] text-[#00DC82]' : 'border-transparent text-slate-500 hover:text-white'}`}>
+                      {file.path.split('/').pop()}
                     </button>
                   ))}
                 </div>
+                <div className="p-8 border-t border-[#1a1e43] bg-black/40 space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Production Pipeline</span>
+                    <div className={`w-2 h-2 rounded-full ${deployStatus?.state === 'READY' ? 'bg-[#00DC82]' : deployStatus ? 'bg-[#00DC82] animate-pulse' : 'bg-slate-800'}`} />
+                  </div>
+                  <button 
+                    onClick={handleDeploy} 
+                    disabled={isDeploying} 
+                    className="w-full py-4 bg-nuxt-gradient text-black font-black uppercase tracking-[0.2em] text-[10px] rounded-xl shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50"
+                  >
+                    {isDeploying ? 'Deploying Shards...' : 'Launch to Vercel'}
+                  </button>
+                </div>
               </div>
-              <div className="flex-1 bg-[#050505]">
-                <Editor 
-                  height="100%" 
-                  theme="vs-dark" 
-                  path={selectedFile?.path} 
-                  defaultLanguage="typescript" 
-                  value={selectedFile?.content} 
-                  options={{ 
-                    minimap: { enabled: false }, 
-                    fontSize: 16, 
-                    padding: { top: 40, bottom: 40 },
-                    lineHeight: 28,
-                    fontFamily: 'JetBrains Mono'
-                  }} 
-                />
+              <div className="flex-1 bg-[#020420]">
+                <Editor height="100%" theme="vs-dark" path={selectedFile?.path} defaultLanguage="typescript" value={selectedFile?.content} options={{ minimap: { enabled: false }, fontSize: 16 }} />
               </div>
             </div>
           )}
-
-          {activeTab === TabType.AGENT_MANAGER && (
-            <div className="h-full p-20 overflow-y-auto custom-scrollbar animate-modal-fade">
-              <div className="max-w-6xl mx-auto space-y-16">
-                <div className="space-y-4">
-                  <h2 className="text-6xl font-black tracking-tighter text-gold uppercase">Agent Collective</h2>
-                  <p className="text-[11px] font-black text-gray-600 tracking-[0.5em] uppercase">Intelligence Node Management</p>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                  {agents.map(agent => (
-                    <div key={agent.id} className="p-12 bg-[#0c0c0c] border border-[#1a1a1a] rounded-[3.5rem] space-y-8 hover:border-[#D4AF37]/30 transition-all relative overflow-hidden group shadow-2xl">
-                      <div className="absolute -top-10 -right-10 w-40 h-40 bg-gold-gradient opacity-[0.03] rounded-full blur-3xl group-hover:opacity-[0.08] transition-opacity" />
-                      <div className="flex justify-between items-start relative z-10">
-                        <div className="space-y-2">
-                          <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.3em]">{agent.role}</span>
-                          <h3 className="text-4xl font-black text-white">{agent.name}</h3>
-                        </div>
-                        <div className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${agent.status === 'active' ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 shadow-[0_0_15px_rgba(212,175,55,0.2)]' : 'bg-white/5 text-gray-600 border border-white/5'}`}>
-                          {agent.status}
-                        </div>
-                      </div>
-                      <p className="text-gray-400 text-base leading-relaxed">{agent.instruction}</p>
-                      <div className="pt-8 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[10px] text-gray-700 font-black uppercase tracking-widest">{agent.model}</span>
-                        <div className="flex gap-6">
-                          <button className="text-[10px] font-black text-gray-500 hover:text-white transition-colors uppercase">Tune</button>
-                          <button className="text-[10px] font-black text-gray-500 hover:text-red-500 transition-colors uppercase">Kill</button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="p-12 bg-[#050505] border-2 border-dashed border-[#1a1a1a] rounded-[3.5rem] flex flex-col gap-8 hover:border-[#D4AF37]/40 transition-all shadow-xl group">
-                    <h4 className="text-[12px] font-black text-gray-500 uppercase tracking-[0.5em] text-center group-hover:text-gray-300">Provision Intelligence</h4>
-                    <div className="space-y-5">
-                      <input 
-                        type="text" 
-                        placeholder="Agent Alias" 
-                        className="w-full bg-[#0c0c0c] border border-[#1a1a1a] rounded-2xl px-8 py-5 text-sm outline-none focus:border-[#D4AF37]/50"
-                        value={newAgent.name || ''}
-                        onChange={e => setNewAgent({...newAgent, name: e.target.value})}
-                      />
-                      <input 
-                        type="text" 
-                        placeholder="Functional Role" 
-                        className="w-full bg-[#0c0c0c] border border-[#1a1a1a] rounded-2xl px-8 py-5 text-sm outline-none focus:border-[#D4AF37]/50"
-                        value={newAgent.role || ''}
-                        onChange={e => setNewAgent({...newAgent, role: e.target.value})}
-                      />
-                    </div>
-                    <button 
-                      onClick={() => alert('Agent Provisioning Initiated')}
-                      className="w-full py-6 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-gradient hover:text-black transition-all shadow-lg"
-                    >
-                      Initialize Shard
-                    </button>
-                  </div>
-                </div>
-              </div>
+          
+          {activeTab === TabType.IMAGE_GEN && (
+            <div className="h-full flex flex-col items-center justify-center p-24 animate-modal-fade max-w-5xl mx-auto gap-16">
+               <h2 className="text-7xl font-black uppercase text-[#00DC82]">Visual Artifacts</h2>
+               <div className="w-full flex gap-6 p-2 bg-[#03062c] border border-[#1a1e43] rounded-[2.5rem] shadow-2xl">
+                 <input type="text" value={imagePrompt} onChange={e => setImagePrompt(e.target.value)} className="flex-1 bg-transparent px-10 py-6 text-xl outline-none" placeholder="Describe artifact..." />
+                 <button onClick={handleImageGen} disabled={isImageGenerating} className="px-14 py-6 bg-nuxt-gradient text-black font-black uppercase text-[13px] rounded-3xl">Generate</button>
+               </div>
+               {generatedImageUrl && <img src={generatedImageUrl} className="w-full rounded-[4rem] border border-[#1a1e43] shadow-2xl" alt="Artifact" />}
+               {isImageGenerating && <div className="animate-pulse text-[#00DC82] font-black uppercase tracking-[0.5em]">Synthesizing Neural Art...</div>}
             </div>
           )}
 
           {activeTab === TabType.DEPLOY && (
-            <div className="h-full flex flex-col items-center justify-center p-20 max-w-4xl mx-auto gap-16 animate-modal-fade text-center relative z-10">
-              <div className="w-40 h-40 bg-gold-gradient rounded-[3rem] flex items-center justify-center shadow-[0_0_60px_rgba(212,175,55,0.3)] animate-pulse">
+            <div className="h-full flex flex-col items-center justify-center p-20 max-w-4xl mx-auto gap-16 animate-modal-fade text-center">
+              <div className="w-40 h-40 bg-nuxt-gradient rounded-[3rem] flex items-center justify-center shadow-[0_0_60px_rgba(0,220,130,0.3)] animate-pulse">
                 <span className="text-7xl">⚡</span>
               </div>
-              <div className="space-y-4">
-                <h2 className="text-7xl font-black tracking-tighter uppercase text-gold drop-shadow-2xl">Production Pipeline</h2>
-                <p className="text-[12px] font-black text-gray-600 tracking-[1em] uppercase">Vercel Edge Integration</p>
-              </div>
-              
+              <h2 className="text-7xl font-black uppercase text-[#00DC82]">Production Pipeline</h2>
               {!deployStatus ? (
-                <div className="w-full space-y-12 bg-[#0c0c0c] border border-[#1a1a1a] p-20 rounded-[4rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] gold-glow">
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block text-left px-6">Deployment Authorization</label>
-                    <input 
-                      type="password" 
-                      placeholder="Vercel API Token (sk_...)" 
-                      value={vercelToken} 
-                      onChange={(e) => setVercelToken(e.target.value)} 
-                      className="w-full bg-black border border-[#1a1a1a] rounded-[1.5rem] px-12 py-7 text-sm outline-none focus:border-[#D4AF37]/50 font-mono transition-all text-center tracking-widest" 
-                    />
-                  </div>
-                  <button 
-                    onClick={handleDeploy} 
-                    disabled={isDeploying || !vercelToken || !generationResult}
-                    className="w-full py-8 bg-gold-gradient text-black font-black uppercase tracking-[0.5em] text-[14px] rounded-3xl shadow-2xl hover:scale-[1.03] transition-all disabled:opacity-50"
-                  >
-                    {isDeploying ? 'Deploying Shards...' : 'Initialize Production Deploy'}
+                <div className="w-full space-y-12 bg-[#03062c] border border-[#1a1e43] p-20 rounded-[4rem] shadow-2xl nuxt-glow">
+                  <input type="password" placeholder="Vercel API Token" value={vercelToken} onChange={(e) => setVercelToken(e.target.value)} className="w-full bg-[#020420] border border-[#1a1e43] rounded-[1.5rem] px-12 py-7 text-sm outline-none text-center" />
+                  <button onClick={handleDeploy} disabled={isDeploying || !vercelToken || !generationResult} className="w-full py-8 bg-nuxt-gradient text-black font-black uppercase text-[14px] rounded-3xl">
+                    {isDeploying ? 'Deploying...' : 'Initialize Vercel Deploy'}
                   </button>
                 </div>
               ) : (
-                <div className="w-full p-20 bg-[#0c0c0c] border border-[#D4AF37]/30 rounded-[4rem] shadow-2xl animate-modal-fade space-y-12">
-                   <div className="space-y-4">
-                      <p className="text-[11px] font-black text-gray-500 uppercase tracking-[0.5em]">Network State</p>
-                      <p className="text-5xl font-black text-[#D4AF37] uppercase animate-pulse">{deployStatus.state}</p>
-                   </div>
-                   <div className="space-y-6">
-                      <p className="text-[11px] font-black text-gray-500 uppercase tracking-[0.5em]">Production Access Point</p>
-                      <a 
-                        href={`https://${deployStatus.url}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="block p-10 bg-black border border-[#1a1a1a] rounded-[2rem] text-[#D4AF37] font-mono text-2xl hover:border-[#D4AF37]/50 transition-all truncate shadow-inner"
-                      >
-                        {deployStatus.url}
-                      </a>
-                   </div>
-                   <button 
-                    onClick={() => setDeployStatus(null)}
-                    className="text-[11px] font-black text-gray-600 uppercase tracking-widest hover:text-white transition-colors"
-                  >
-                    Return to Orchestration Cycle
-                  </button>
+                <div className="w-full p-20 bg-[#03062c] border border-[#00DC82]/30 rounded-[4rem] space-y-12">
+                   <p className="text-5xl font-black text-[#00DC82] uppercase">{deployStatus.state}</p>
+                   <a href={`https://${deployStatus.url}`} target="_blank" rel="noopener noreferrer" className="block p-10 bg-[#020420] border border-[#1a1e43] rounded-[2rem] text-[#00DC82] font-mono text-2xl truncate">
+                     {deployStatus.url}
+                   </a>
                 </div>
               )}
             </div>
@@ -501,48 +690,25 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Global Settings Modal */}
-      <NeuralModal 
-        isOpen={isConfigOpen} 
-        onClose={() => setIsConfigOpen(false)} 
-        title="Studio Protocol Config" 
-        transition="fadeSlideIn" 
-        size="lg"
-      >
+      <NeuralModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} title="Studio Protocol Config" size="lg">
         <div className="space-y-16">
           <div className="grid grid-cols-2 gap-16">
             <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Creativity Gain</label>
-                <span className="text-[11px] font-black text-[#D4AF37]">{modelConfig.temperature}</span>
-              </div>
-              <input 
-                type="range" min="0" max="1" step="0.1" 
-                value={modelConfig.temperature} 
-                onChange={(e) => setModelConfig({...modelConfig, temperature: parseFloat(e.target.value)})} 
-                className="w-full accent-[#D4AF37] h-1.5 rounded-full appearance-none bg-white/5 cursor-pointer" 
-              />
+              <label className="text-[10px] font-black text-slate-500 uppercase">Creativity Gain</label>
+              <input type="range" min="0" max="1" step="0.1" value={modelConfig.temperature} onChange={(e) => setModelConfig({...modelConfig, temperature: parseFloat(e.target.value)})} className="w-full" />
             </div>
             <div className="space-y-6">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Reasoning Depth</label>
-              <select 
-                value={modelConfig.thinkingBudget} 
-                onChange={(e) => setModelConfig({...modelConfig, thinkingBudget: parseInt(e.target.value)})} 
-                className="w-full bg-black border border-[#1a1a1a] rounded-2xl px-8 py-5 text-[12px] font-black text-[#D4AF37] outline-none cursor-pointer hover:border-[#D4AF37]/30 transition-all"
-              >
-                <option value="0">Standard Inference</option>
-                <option value="16384">Balanced Reasoning</option>
-                <option value="32768">Deep Neural Synthesis</option>
+              <label className="text-[10px] font-black text-slate-500 uppercase">Reasoning Depth</label>
+              <select value={modelConfig.thinkingBudget} onChange={(e) => setModelConfig({...modelConfig, thinkingBudget: parseInt(e.target.value)})} className="w-full bg-[#020420] border border-[#1a1e43] rounded-2xl px-8 py-5 text-[12px] text-[#00DC82]">
+                <option value="0">Standard</option>
+                <option value="16384">Balanced</option>
+                <option value="32768">Deep Neural</option>
               </select>
             </div>
           </div>
           <div className="space-y-6">
-             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">System Protocol Instruction</label>
-             <textarea 
-               value={modelConfig.systemInstruction}
-               onChange={(e) => setModelConfig({...modelConfig, systemInstruction: e.target.value})}
-               className="w-full h-56 bg-black border border-[#1a1a1a] rounded-3xl p-8 text-[13px] font-medium text-gray-400 outline-none focus:border-[#D4AF37]/50 transition-all resize-none custom-scrollbar"
-             />
+             <label className="text-[10px] font-black text-slate-500 uppercase">System Protocol</label>
+             <textarea value={modelConfig.systemInstruction} onChange={(e) => setModelConfig({...modelConfig, systemInstruction: e.target.value})} className="w-full h-56 bg-[#020420] border border-[#1a1e43] rounded-3xl p-8 text-[13px] text-slate-400 outline-none resize-none custom-scrollbar" />
           </div>
         </div>
       </NeuralModal>

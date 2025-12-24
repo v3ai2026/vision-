@@ -14,8 +14,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IntelliBuild Studio | Multi-Sector Agent OS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>IntelliBuild Studio | Mobile Optimized Agent OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -34,10 +36,12 @@
             font-family: 'Inter', sans-serif; 
             -webkit-font-smoothing: antialiased;
             touch-action: manipulation;
+            /* Prevents pull-to-refresh on mobile Chrome/Safari */
+            overscroll-behavior-y: contain;
         }
 
-        /* Standard custom scrollbar */
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        /* Standard custom scrollbar - thinner for mobile */
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; height: 3px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 220, 130, 0.2); border-radius: 10px; }
 
@@ -51,6 +55,7 @@
             -webkit-text-fill-color: transparent;
         }
 
+        /* Optimize animations for mobile GPUs */
         @keyframes modal-fade {
             from { opacity: 0; transform: scale(0.98); }
             to { opacity: 1; transform: scale(1); }
@@ -60,25 +65,30 @@
             to { opacity: 1; filter: blur(0); transform: translateY(0); }
         }
         @keyframes modal-slide {
-            from { opacity: 0; transform: translateY(40px); }
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes modal-zoom {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
         }
         @keyframes backdrop-in {
             from { opacity: 0; }
             to { opacity: 1; }
         }
 
-        .animate-modal-fade { animation: modal-fade 0.3s ease-out forwards; }
-        .animate-modal-fade-slide-in { animation: modal-fade-slide-in 0.4s ease-out forwards; }
-        .animate-modal-slide { animation: modal-slide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-modal-zoom { animation: modal-zoom 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-backdrop { animation: backdrop-in 0.3s ease-out forwards; }
+        .animate-modal-fade { animation: modal-fade 0.2s ease-out forwards; will-change: transform, opacity; }
+        .animate-modal-fade-slide-in { animation: modal-fade-slide-in 0.3s ease-out forwards; will-change: transform, opacity; }
+        .animate-modal-slide { animation: modal-slide 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: transform, opacity; }
+        .animate-backdrop { animation: backdrop-in 0.2s ease-out forwards; will-change: opacity; }
 
-        /* Disable user text selection for UI elements to feel more like a native app */
+        /* Mobile specific touch area optimizations */
+        @media (max-width: 768px) {
+            button, a, input, select, textarea {
+                min-height: 44px;
+            }
+            .mobile-safe-bottom {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+
+        /* Disable user text selection for UI elements */
         nav, button { user-select: none; -webkit-user-select: none; }
     </style>
 </head>

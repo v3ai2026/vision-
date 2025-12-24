@@ -1,44 +1,81 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { GenerationResult, LibraryItem, ModelConfig, GeneratedFile } from "../types";
 
 const DEFAULT_SYSTEM_INSTRUCTION = `你是一个顶级进化级全栈 AI 编排系统（IntelliBuild Studio Core）。
 你的核心开发准则是：
-1. 【极致无障碍 (Accessibility)】：这是最高优先级。所有生成的 React 组件必须遵循 WCAG 2.1 级别 AA 或更高标准。
-2. 【现代 SaaS 架构】：参考 ixartz, async-labs 等顶级 SaaS 模板。确保代码是模块化、类型安全且可扩展的。
-3. 【Vercel 边缘计算优化】：
-   - 对于所有动态逻辑（API 路由），必须默认使用 Vercel Edge Runtime。
-   - 在 API 路由文件中包含：export const runtime = 'edge';
-   - 优化静态资源（SSG/ISR），确保 Next.js 项目结构完全符合 Vercel 自动化构建标准。
-4. 【强制单元测试】：每一个新创建的 React 组件 (.tsx) 都必须配备一个对应的 Vitest 测试文件 (.test.tsx)。
-5. 【深色奢华美学】：使用 Tailwind CSS。采用“深色奢华 (Luxury Dark)”风格，配合黄金比例布局和玻璃拟态效果。`;
+
+1. 【极致无障碍与语义化 (A11y-First & Semantic HTML)】：这是最高优先级，不可妥协。
+   - 所有生成的 React 组件必须严格遵循 WCAG 2.1 级别 AA 或更高标准。
+   - 强制使用语义化 HTML 标签：
+     - 使用 <header>, <main>, <footer> 划分页面大区。
+     - 使用 <nav> 包裹所有导航链接。
+     - 使用 <section> 和 <article> 组织内容块，且每个 section 必须有对应的标题标签 (h2-h6)。
+     - 严禁使用 <div> 替代 <a> 或 <button>。
+   - 强制 ARIA 属性：
+     - 每一个交互元素（Button, Link, Input）必须有明确的 aria-label 或关联的 <label>。
+     - 状态变化必须通过 aria-expanded, aria-checked, aria-selected 等属性实时反映。
+     - 弹出层（Modal, Tooltip）必须包含 role="dialog" 或 role="tooltip"，并支持 aria-modal="true"。
+   - 聚焦管理：所有交互元素必须具备明显的 :focus-visible 样式（建议使用 ring-2 ring-nuxt-green）。
+   - 图片准则：所有 <img> 必须有 alt。装饰性图片使用 alt=""，功能性图片必须描述其意图。
+
+2. 【强制自动化测试 (TDD-lite)】：
+   - 每一个生成的 UI 组件 (.tsx) 都必须伴随一个同名的测试文件 (.test.tsx)。
+   - 使用 Vitest + @testing-library/react + @testing-library/jest-dom。
+   - 测试必须包含：
+     - 基础渲染测试（Snapshot 或 render 检查）。
+     - **无障碍检查**：测试关键元素是否包含正确的 aria-label 和 role。
+     - **交互逻辑测试**：模拟点击、输入等事件，验证状态更新。
+   - 必须提供全局测试配置文件：\`vitest.config.ts\` 和 \`setupTests.ts\`。
+
+3. 【现代 SaaS 架构与 Vercel 优化】：
+   - 采用 Next.js App Router 架构。
+   - 所有 API 路由必须标注 \`export const runtime = 'edge';\` 以利用 Vercel Edge Runtime 的低延迟特性。
+   - 优化环境变量注入，确保代码在部署后能立即运行。
+
+4. 【深色奢华美学】：使用 Tailwind CSS。采用“深色奢华 (Luxury Dark)”风格，背景 #020420，强调色 #00DC82 (Nuxt Green)。`;
 
 export const generateFullStackProject = async (
   prompt: string, 
   config: ModelConfig,
   customLibrary: LibraryItem[] = [],
-  contextShards: string[] = []
+  contextShards: string[] = [],
+  images: { data: string, mimeType: string }[] = []
 ): Promise<GenerationResult> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const libraryContext = customLibrary.map(item => `- ${item.name}: ${item.description}`).join('\n');
   const vaultContext = contextShards.join('\n\n');
 
-  const enhancedPrompt = `User Intent: ${prompt}
+  const textPart = {
+    text: `User Intent: ${prompt}
 
 Intelligence Vault Context:
 ${vaultContext}
 
-Technical Requirements:
-- Build a Next.js project optimized for Vercel.
-- Use Edge Functions for all dynamic backend logic (export const runtime = 'edge').
-- Ensure 100% ARIA compliance.
-- Generate Vitest suites for components.
-- Include a vercel.json if custom routing or headers are required.`;
+Technical Protocols (MANDATORY):
+- Project Type: Next.js (App Router) optimized for Vercel.
+- Runtime: Vercel Edge Runtime for all API routes.
+- Accessibility: 100% A11y compliance. Use semantic tags and full ARIA suites.
+- Testing: Mandatory Vitest suite. Generate .test.tsx for EVERY component.
+- Vitest Setup: Include vitest.config.ts and setupTests.ts in the root.
+- Styling: Tailwind CSS (Luxury Dark + Nuxt Green).
+- Design Context: If images are attached, extract colors, typography, and spacing to recreate the design precisely using semantic React components.
+- Output Format: Return a complete, build-ready project structure in JSON.`
+  };
 
+  const imageParts = images.map(img => ({
+    inlineData: {
+      data: img.data,
+      mimeType: img.mimeType
+    }
+  }));
+
+  const isThinking = config.thinkingBudget > 0;
+  
   const genConfig: any = {
     systemInstruction: `${config.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION}\n\nLibrary protocols:\n${libraryContext}`,
     responseMimeType: "application/json",
-    temperature: config.temperature,
+    temperature: isThinking ? 1 : config.temperature,
     topP: config.topP,
     topK: config.topK,
     responseSchema: {
@@ -73,17 +110,53 @@ Technical Requirements:
     }
   };
 
-  if (config.thinkingBudget > 0) {
-    genConfig.thinkingConfig = { thinkingBudget: config.thinkingBudget };
+  if (isThinking) {
+    genConfig.thinkingConfig = { thinkingBudget: 32768 };
   }
 
   const response = await ai.models.generateContent({
-    model: config.thinkingBudget > 0 ? "gemini-3-pro-preview" : "gemini-3-flash-preview",
-    contents: enhancedPrompt,
+    model: isThinking ? "gemini-3-pro-preview" : "gemini-3-flash-preview",
+    contents: { parts: [...imageParts, textPart] },
     config: genConfig
   });
 
   return JSON.parse(response.text || '{}') as GenerationResult;
+};
+
+export const transcribeAudio = async (base64Audio: string, mimeType: string): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: [
+      {
+        parts: [
+          { inlineData: { data: base64Audio, mimeType } },
+          { text: "Transcribe this audio accurately. Output only the transcription text." }
+        ]
+      }
+    ]
+  });
+  return response.text || "";
+};
+
+export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash-preview-tts",
+    contents: [{ parts: [{ text: `Say this: ${text}` }] }],
+    config: {
+      responseModalities: [Modality.AUDIO],
+      speechConfig: {
+        voiceConfig: {
+          prebuiltVoiceConfig: { voiceName },
+        },
+      },
+    },
+  });
+
+  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  if (!base64Audio) throw new Error("Speech synthesis failed");
+  return base64Audio;
 };
 
 export const convertToColabNotebook = (files: GeneratedFile[], projectName: string): string => {

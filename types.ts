@@ -61,6 +61,7 @@ export interface Extension {
 
 export enum TabType {
   // Sector 1: Genesis (Creation)
+  CREATION_BUILDER = 'CREATION_BUILDER',
   CREATION_NOTEBOOK = 'CREATION_NOTEBOOK',
   CREATION_ASSETS = 'CREATION_ASSETS',
   
@@ -73,8 +74,11 @@ export enum TabType {
   MEDIA_TIKTOK = 'MEDIA_TIKTOK',
   MEDIA_TMDB = 'MEDIA_TMDB',
   MEDIA_ADS = 'MEDIA_ADS',
+
+  // Sector 4: Design & Multimodal
+  DESIGN_FIGMA = 'DESIGN_FIGMA',
   
-  // Sector 4: DevOps Shard (Automation)
+  // Sector 5: DevOps Shard (Automation)
   DEVOPS_WORKFLOW = 'DEVOPS_WORKFLOW',
   DEVOPS_DEPLOY = 'DEVOPS_DEPLOY',
   DEVOPS_GCS = 'DEVOPS_GCS',

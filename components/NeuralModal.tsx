@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+
+import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 export type ModalTransition = 'slide' | 'fade' | 'zoom' | 'fadeSlideIn';
@@ -19,6 +20,11 @@ const TRANSITION_MAP: Record<ModalTransition, string> = {
   fadeSlideIn: 'animate-modal-fade-slide-in',
 };
 
+/**
+ * NeuralModal: A high-fidelity, accessible modal component with multiple transition support.
+ * Integrates with standard ARIA patterns and luxury deep-dark aesthetics.
+ * Refactored for robust focus trapping and seamless Tailwind animation integration.
+ */
 export const NeuralModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -37,27 +43,29 @@ export const NeuralModal: React.FC<{
   size = 'md',
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
-  const portalRoot = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    portalRoot.current = document.getElementById('modal-root');
-  }, []);
-
+  // Focus Trapping Logic to keep users inside the modal context
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') onClose();
+    if (e.key === 'Escape') {
+      onClose();
+      return;
+    }
+    
     if (e.key === 'Tab' && modalRef.current) {
       const focusableElements = modalRef.current.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
+      if (focusableElements.length === 0) return;
+
       const firstElement = focusableElements[0] as HTMLElement;
       const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
-      if (e.shiftKey) {
+      if (e.shiftKey) { // Shift + Tab
         if (document.activeElement === firstElement) {
           lastElement.focus();
           e.preventDefault();
         }
-      } else {
+      } else { // Tab
         if (document.activeElement === lastElement) {
           firstElement.focus();
           e.preventDefault();
@@ -70,34 +78,46 @@ export const NeuralModal: React.FC<{
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
-      // Accessibility: Focus the modal surface on open
-      setTimeout(() => modalRef.current?.focus(), 50);
+      
+      // Accessibility: Move focus to the modal container on entry after transition starts
+      const timer = setTimeout(() => modalRef.current?.focus(), 150);
+      
       return () => {
         document.body.style.overflow = 'unset';
         window.removeEventListener('keydown', handleKeyDown);
+        clearTimeout(timer);
       };
     }
   }, [isOpen, handleKeyDown]);
 
-  const transitionClass = useMemo(() => TRANSITION_MAP[transition], [transition]);
-  const sizeClass = useMemo(() => SIZE_MAP[size], [size]);
-
-  if (!isOpen || !portalRoot.current) return null;
+  // Use document.getElementById directly to ensure we have the element during render
+  const portalRoot = typeof document !== 'undefined' ? document.getElementById('modal-root') : null;
+  
+  if (!isOpen || !portalRoot) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 md:p-12 pointer-events-none">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 md:p-12 pointer-events-none" role="none">
+      {/* Backdrop with dedicated entrance animation */}
       <div 
-        className="fixed inset-0 animate-backdrop backdrop-blur-2xl bg-black/40 cursor-pointer pointer-events-auto" 
+        className="fixed inset-0 animate-backdrop backdrop-blur-3xl bg-black/60 cursor-pointer pointer-events-auto" 
         onClick={onClose} 
         aria-hidden="true"
       />
+      
+      {/* Modal Surface: Uses the dynamic transition mapping */}
       <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="neural-modal-title"
         tabIndex={-1}
-        className={`relative w-full ${sizeClass} bg-[#020420] border border-[#1a1e43] rounded-3xl md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden outline-none pointer-events-auto max-h-[90vh] ${transitionClass}`}
+        className={`
+          relative w-full ${SIZE_MAP[size]} 
+          bg-[#020420] border border-[#1a1e43] rounded-3xl md:rounded-[3rem] 
+          shadow-[0_0_100px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden 
+          outline-none pointer-events-auto max-h-[90vh] 
+          ${TRANSITION_MAP[transition]}
+        `}
       >
         <header className="flex items-center justify-between px-6 md:px-10 py-6 md:py-8 border-b border-[#1a1e43] bg-black/50 z-20 shrink-0">
           <div className="flex items-center gap-3">
@@ -108,22 +128,24 @@ export const NeuralModal: React.FC<{
           </div>
           <button 
             onClick={onClose} 
-            className="text-white/20 hover:text-[#00DC82] p-2 transition-colors rounded-lg hover:bg-white/5"
+            className="text-white/20 hover:text-[#00DC82] p-2 transition-colors rounded-lg hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#00DC82]/50"
             aria-label="Close modal"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </header>
+
         <div className="flex-1 p-6 md:p-12 text-sm text-slate-400 overflow-y-auto custom-scrollbar bg-[#020420]/80">
           {children}
         </div>
+
         {footer && (
-          <footer className="px-6 md:px-10 py-6 md:py-8 border-t border-[#1a1e43] bg-black/50 shrink-0">
+          <footer className="px-6 md:px-10 py-6 md:py-8 border-t border-[#1a1e43] bg-black/50 shrink-0 flex justify-end gap-4">
             {footer}
           </footer>
         )}
       </div>
     </div>,
-    portalRoot.current
+    portalRoot
   );
 };

@@ -4,13 +4,13 @@ import { Extension } from "../types";
 export const PLUGIN_REGISTRY: Extension[] = [
   {
     id: 'vsl-a11y-guardian',
-    name: 'A11y Guardian',
-    description: 'Enforces strict WCAG 2.1 compliance during the inference phase.',
+    name: 'A11y Guardian Pro',
+    description: 'Enforces strict semantic HTML and ARIA 1.2 compliance during the generation phase.',
     category: 'PROTOCOL',
-    version: '1.0.5',
+    version: '2.0.0',
     author: 'Studio Core',
     enabled: true,
-    manifest: 'Injects [aria-*], [role], and semantic HTML5 structures into all component trees. Validates focus-trap logic for dialogues.'
+    manifest: 'Mandates semantic tags (<nav>, <main>, etc.) and valid ARIA attributes (labels, roles, descriptions) for every UI element. Validates keyboard accessibility and focus management.'
   },
   {
     id: 'vsl-pwa-booster',
@@ -34,13 +34,13 @@ export const PLUGIN_REGISTRY: Extension[] = [
   },
   {
     id: 'vsl-vitest-runner',
-    name: 'Vitest Automated',
-    description: 'Generates robust test suites for every created component using @testing-library/react.',
+    name: 'Vitest Prime',
+    description: 'Generates robust, A11y-aware unit tests for every created component using Vitest.',
     category: 'COMPILER',
-    version: '1.3.0',
+    version: '2.0.0',
     author: 'Studio Core',
     enabled: true,
-    manifest: 'Mandates a .test.tsx file for every .tsx component. Targets 95%+ coverage for interaction and accessibility attributes.'
+    manifest: 'Automatically produces a .test.tsx file for every component. Tests prioritize functional correctness and accessibility attribute presence.'
   }
 ];
 

@@ -5,7 +5,7 @@ import { generateFullStackProject, convertToColabNotebook, transcribeAudio, gene
 import { FigmaService } from './services/figmaService';
 import { deployToVercel, checkDeploymentStatus } from './services/vercelService';
 import { GCSService } from './services/gcsService';
-import { NeuralModal } from './components/NeuralModal';
+import { NeuralModal } from './components/EnhancedDialog';
 import { 
   NeuralButton, 
   NeuralInput, 
@@ -16,12 +16,16 @@ import {
   GlassCard, 
   NeuralSpinner,
   ProgressBar
-} from './components/UIElements';
+} from './components/EnhancedUI';
+import { Toaster } from './components/ui/toaster';
+import { useToast } from './components/ui/use-toast';
 import { GeneratedFile, TabType, ModelConfig, GenerationResult, AIAgent, DeploymentStatus } from './types';
 
 const INITIAL_SYSTEM = `你是一个顶级进化级全栈 AI 编排系统（DeepMind 级架构师）。正在操作分布式代理集群。风格：奢华深色，Nuxt 翠绿。优先移动端适配。`;
 
 const App: React.FC = () => {
+  const { toast } = useToast();
+  
   const [modelConfig, setModelConfig] = useState<ModelConfig>({
     temperature: 0.7, topP: 0.95, topK: 40, thinkingBudget: 0,
     systemInstruction: INITIAL_SYSTEM
@@ -159,7 +163,13 @@ const App: React.FC = () => {
           if (updated.state === 'READY' || updated.state === 'ERROR') clearInterval(poll);
         }, 5000);
       }
-    } catch (e: any) { alert(e.message); } finally { setIsDeploying(false); }
+    } catch (e: any) { 
+      toast({
+        variant: "destructive",
+        title: "Deployment Error",
+        description: e.message
+      });
+    } finally { setIsDeploying(false); }
   };
 
   // GCS Handlers
@@ -170,7 +180,13 @@ const App: React.FC = () => {
       const gcs = new GCSService(gcsToken);
       const buckets = await gcs.listBuckets(gcsProjectId);
       setGcsBuckets(buckets);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { 
+      toast({
+        variant: "destructive",
+        title: "GCS Connection Error",
+        description: e.message
+      });
+    }
     finally { setIsGcsLoading(false); }
   };
 
@@ -181,7 +197,13 @@ const App: React.FC = () => {
       const gcs = new GCSService(gcsToken);
       const objects = await gcs.listObjects(bucketName);
       setBucketObjects(objects);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { 
+      toast({
+        variant: "destructive",
+        title: "Bucket Load Error",
+        description: e.message
+      });
+    }
     finally { setIsGcsLoading(false); }
   };
 
@@ -193,7 +215,13 @@ const App: React.FC = () => {
       await gcs.createBucket(gcsProjectId, newBucketName);
       await handleGcsConnect();
       setNewBucketName('');
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { 
+      toast({
+        variant: "destructive",
+        title: "Bucket Creation Error",
+        description: e.message
+      });
+    }
     finally { setIsBucketCreating(false); }
   };
 
@@ -204,8 +232,17 @@ const App: React.FC = () => {
       const gcs = new GCSService(gcsToken);
       await gcs.uploadProject(selectedBucket, generationResult.files);
       await handleSelectBucket(selectedBucket);
-      alert('Project shards successfully synchronized to GCS bucket.');
-    } catch (e: any) { alert(e.message); }
+      toast({
+        title: "Deployment Success",
+        description: "Project shards successfully synchronized to GCS bucket."
+      });
+    } catch (e: any) { 
+      toast({
+        variant: "destructive",
+        title: "GCS Deploy Error",
+        description: e.message
+      });
+    }
     finally { setIsGcsLoading(false); }
   };
 
@@ -231,7 +268,13 @@ const App: React.FC = () => {
       const fileKey = figmaFileUrl.match(/file\/([a-zA-Z0-9]+)/)?.[1] || figmaFileUrl;
       const data = await figma.getFile(fileKey);
       setFigmaFileData(data);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { 
+      toast({
+        variant: "destructive",
+        title: "Figma Sync Error",
+        description: e.message
+      });
+    }
     finally { setIsFigmaLoading(false); }
   };
 
@@ -256,7 +299,13 @@ const App: React.FC = () => {
         base64Map[id] = base64;
       }
       setFigmaExportedImages(prev => ({ ...prev, ...base64Map }));
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { 
+      toast({
+        variant: "destructive",
+        title: "Figma Export Error",
+        description: e.message
+      });
+    }
     finally { setIsExportingDesign(false); }
   };
 
@@ -770,7 +819,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <NeuralModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} title="System Protocols" transition="slide" size={isMobile ? 'full' : 'md'}>
+      <NeuralModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} title="System Protocols" size={isMobile ? 'full' : 'md'}>
         <div className="space-y-8 md:space-y-12">
           <div className="space-y-4 md:space-y-6">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Neural Temperature</label>
@@ -824,6 +873,9 @@ const App: React.FC = () => {
            <NeuralButton onClick={handleSaveAgent} className="w-full">{editingAgent ? "Update Protocol" : "Manifest Shard"}</NeuralButton>
         </div>
       </NeuralModal>
+      
+      {/* Toast notifications */}
+      <Toaster />
     </div>
   );
 };

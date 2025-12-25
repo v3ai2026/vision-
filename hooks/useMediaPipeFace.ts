@@ -19,8 +19,11 @@ export const useMediaPipeFace = (): MediaPipeHookResult => {
   useEffect(() => {
     const initializeMediaPipe = async () => {
       try {
+        // Using pinned version for stability and security
+        // TODO: For production, host these files locally or on your own CDN
+        const MEDIAPIPE_VERSION = '0.10.8';
         const vision = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+          `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`
         );
 
         const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {

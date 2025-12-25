@@ -21,9 +21,14 @@ function GlassesModel({
   scale: number;
   modelUrl: string;
 }) {
+  // TODO: Replace with actual model loading for production
+  // Uncomment when real 3D models are available:
+  // const { scene } = useGLTF(modelUrl);
+  // return <primitive object={scene} position={position} rotation={rotation} scale={scale} />;
+  
+  // Placeholder geometry for demonstration
   return (
     <mesh position={position} rotation={rotation} scale={scale}>
-      {/* Placeholder geometry - replace with actual model loading */}
       <boxGeometry args={[2, 0.3, 0.1]} />
       <meshStandardMaterial color="#00DC82" metalness={0.8} roughness={0.2} />
     </mesh>

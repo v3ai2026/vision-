@@ -30,12 +30,16 @@ export const BodyAnalyzer: React.FC<BodyAnalyzerProps> = ({
   const performAnalysis = () => {
     setIsAnalyzing(true);
     
-    // Simulate AI analysis
+    // Simulate AI analysis - TODO: Replace with actual AI service integration
+    // For production, integrate with:
+    // - TensorFlow.js body pose estimation
+    // - MediaPipe pose detection
+    // - Custom AI model for body measurement
     setTimeout(() => {
       const height = parseFloat(inputHeight) || 170;
       const weight = parseFloat(inputWeight) || 70;
       
-      // Simple BMI-based analysis
+      // Simple BMI-based analysis for demonstration
       const heightInMeters = height / 100;
       const bmi = weight / (heightInMeters * heightInMeters);
       

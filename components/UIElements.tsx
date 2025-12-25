@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 
 // --- SHARED TYPES ---
 type ComponentVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -19,20 +19,30 @@ export const GlassCard: React.FC<{
   hover?: boolean;
   onClick?: () => void;
   ariaLabel?: string;
-}> = ({ children, className = '', hover = false, onClick, ariaLabel }) => (
-  <div 
-    onClick={onClick}
-    aria-label={ariaLabel}
-    className={`
-      bg-[#020420]/60 backdrop-blur-xl border border-[#1a1e43] rounded-[2rem] p-6
-      ${hover ? 'hover:border-[#00DC82]/30 hover:bg-[#00DC82]/5 transition-all duration-500' : ''}
-      ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}
-      ${className}
-    `}
-  >
-    {children}
-  </div>
-);
+  hoverSpark?: boolean;
+  sparkColor?: string;
+}> = ({ children, className = '', hover = false, onClick, ariaLabel, hoverSpark = false, sparkColor = '#00DC82' }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div 
+      ref={cardRef}
+      onClick={onClick}
+      aria-label={ariaLabel}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`
+        bg-[#020420]/60 backdrop-blur-xl border border-[#1a1e43] rounded-[2rem] p-6
+        ${hover ? 'hover:border-[#00DC82]/30 hover:bg-[#00DC82]/5 transition-all duration-500' : ''}
+        ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}
+        ${className}
+      `}
+    >
+      {children}
+    </div>
+  );
+};
 
 /**
  * NeuralButton: High-fidelity button with loading states and luxury gradients.
@@ -45,7 +55,19 @@ export const NeuralButton: React.FC<{
   loading?: boolean;
   disabled?: boolean;
   className?: string;
-}> = ({ children, onClick, variant = 'primary', size = 'md', loading = false, disabled = false, className = '' }) => {
+  sparkEffect?: 'explosion' | 'hover' | 'none';
+  sparkIntensity?: 'low' | 'medium' | 'high';
+}> = ({ 
+  children, 
+  onClick, 
+  variant = 'primary', 
+  size = 'md', 
+  loading = false, 
+  disabled = false, 
+  className = '',
+  sparkEffect = 'none',
+  sparkIntensity = 'medium'
+}) => {
   const baseStyles = "inline-flex items-center justify-center font-black uppercase tracking-widest transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95";
   
   const variants = {
@@ -86,7 +108,9 @@ export const NeuralInput: React.FC<{
   placeholder?: string;
   type?: string;
   className?: string;
-}> = ({ label, value, onChange, placeholder, type = 'text', className = '' }) => (
+  onFocusSpark?: boolean;
+  typingSpark?: boolean;
+}> = ({ label, value, onChange, placeholder, type = 'text', className = '', onFocusSpark = false, typingSpark = false }) => (
   <div className="space-y-2 w-full">
     {label && <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">{label}</label>}
     <input

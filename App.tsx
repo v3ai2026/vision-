@@ -17,6 +17,12 @@ import {
   NeuralSpinner,
   ProgressBar
 } from './components/UIElements';
+import { 
+  SparkExplosion, 
+  SparkTrail, 
+  SparkRain, 
+  SuccessFireworks 
+} from './components/effects/sparks';
 import { GeneratedFile, TabType, ModelConfig, GenerationResult, AIAgent, DeploymentStatus } from './types';
 
 const INITIAL_SYSTEM = `你是一个顶级进化级全栈 AI 编排系统（DeepMind 级架构师）。正在操作分布式代理集群。风格：奢华深色，Nuxt 翠绿。优先移动端适配。`;
@@ -85,6 +91,10 @@ const App: React.FC = () => {
   const [isFigmaLoading, setIsFigmaLoading] = useState(false);
   const [selectedFigmaNodes, setSelectedFigmaNodes] = useState<string[]>([]);
   const [isExportingDesign, setIsExportingDesign] = useState(false);
+
+  // Spark Effects State
+  const [showSuccessFireworks, setShowSuccessFireworks] = useState(false);
+  const [sparkEffectsEnabled, setSparkEffectsEnabled] = useState(true);
 
   // Audio Processing
   const [isRecording, setIsRecording] = useState(false);
@@ -156,7 +166,14 @@ const App: React.FC = () => {
         const poll = setInterval(async () => {
           const updated = await checkDeploymentStatus(status.id, vercelToken);
           setDeployStatus(updated);
-          if (updated.state === 'READY' || updated.state === 'ERROR') clearInterval(poll);
+          if (updated.state === 'READY') {
+            clearInterval(poll);
+            // Trigger success fireworks! 🎆
+            setShowSuccessFireworks(true);
+            setTimeout(() => setShowSuccessFireworks(false), 3000);
+          } else if (updated.state === 'ERROR') {
+            clearInterval(poll);
+          }
         }, 5000);
       }
     } catch (e: any) { alert(e.message); } finally { setIsDeploying(false); }
@@ -824,6 +841,32 @@ const App: React.FC = () => {
            <NeuralButton onClick={handleSaveAgent} className="w-full">{editingAgent ? "Update Protocol" : "Manifest Shard"}</NeuralButton>
         </div>
       </NeuralModal>
+
+      {/* 🎆 SPARK EFFECTS LAYER */}
+      {sparkEffectsEnabled && (
+        <>
+          <SparkExplosion 
+            trigger="click" 
+            intensity="medium"
+            enabled={sparkEffectsEnabled}
+          />
+          <SparkTrail 
+            follow="mouse"
+            density={5}
+            enabled={sparkEffectsEnabled}
+          />
+          <SparkRain 
+            density={10}
+            direction="down"
+            enabled={sparkEffectsEnabled}
+          />
+          <SuccessFireworks 
+            trigger={showSuccessFireworks}
+            duration={3000}
+            onComplete={() => setShowSuccessFireworks(false)}
+          />
+        </>
+      )}
     </div>
   );
 };

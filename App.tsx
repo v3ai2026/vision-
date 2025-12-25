@@ -17,6 +17,12 @@ import {
   NeuralSpinner,
   ProgressBar
 } from './components/UIElements';
+import { 
+  SparkExplosion, 
+  SparkTrail, 
+  SparkRain, 
+  SuccessFireworks 
+} from './components/effects/sparks';
 import { GeneratedFile, TabType, ModelConfig, GenerationResult, AIAgent, DeploymentStatus } from './types';
 import { AdsDashboard } from './components/ads/AdsDashboard';
 import { AIAdCreator } from './components/ads/AIAdCreator';
@@ -89,6 +95,10 @@ const App: React.FC = () => {
   const [isFigmaLoading, setIsFigmaLoading] = useState(false);
   const [selectedFigmaNodes, setSelectedFigmaNodes] = useState<string[]>([]);
   const [isExportingDesign, setIsExportingDesign] = useState(false);
+
+  // Spark Effects State
+  const [showSuccessFireworks, setShowSuccessFireworks] = useState(false);
+  const [sparkEffectsEnabled, setSparkEffectsEnabled] = useState(true);
 
   // Audio Processing
   const [isRecording, setIsRecording] = useState(false);
@@ -175,7 +185,14 @@ const App: React.FC = () => {
         const poll = setInterval(async () => {
           const updated = await checkDeploymentStatus(status.id, vercelToken);
           setDeployStatus(updated);
-          if (updated.state === 'READY' || updated.state === 'ERROR') clearInterval(poll);
+          if (updated.state === 'READY') {
+            clearInterval(poll);
+            // Trigger success fireworks! 🎆
+            setShowSuccessFireworks(true);
+            setTimeout(() => setShowSuccessFireworks(false), 3000);
+          } else if (updated.state === 'ERROR') {
+            clearInterval(poll);
+          }
         }, 5000);
       }
     } catch (e: any) { alert(e.message); } finally { setIsDeploying(false); }
@@ -833,6 +850,7 @@ const App: React.FC = () => {
           </div>
           <NeuralTextArea value={modelConfig.systemInstruction} onChange={e => setModelConfig({...modelConfig, systemInstruction: e.target.value})} label="System Instruction" className="h-32 md:h-48" />
           <NeuralSwitch checked={useDeepReasoning} onChange={setUseDeepReasoning} label="Deep Reasoning" description="Complex logic synthesis" />
+          <NeuralSwitch checked={sparkEffectsEnabled} onChange={setSparkEffectsEnabled} label="Spark Effects" description="Visual particle effects 🎆" />
           <NeuralButton onClick={() => setIsConfigOpen(false)} className="w-full">Save Protocols</NeuralButton>
         </div>
       </NeuralModal>
@@ -879,6 +897,32 @@ const App: React.FC = () => {
            <NeuralButton onClick={handleSaveAgent} className="w-full">{editingAgent ? "Update Protocol" : "Manifest Shard"}</NeuralButton>
         </div>
       </NeuralModal>
+
+      {/* 🎆 SPARK EFFECTS LAYER */}
+      {sparkEffectsEnabled && (
+        <>
+          <SparkExplosion 
+            trigger="click" 
+            intensity="medium"
+            enabled={sparkEffectsEnabled}
+          />
+          <SparkTrail 
+            follow="mouse"
+            density={5}
+            enabled={sparkEffectsEnabled}
+          />
+          <SparkRain 
+            density={10}
+            direction="down"
+            enabled={sparkEffectsEnabled}
+          />
+          <SuccessFireworks 
+            trigger={showSuccessFireworks}
+            duration={3000}
+            onComplete={() => setShowSuccessFireworks(false)}
+          />
+        </>
+      )}
     </div>
   );
 };

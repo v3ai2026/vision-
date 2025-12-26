@@ -1,22 +1,15 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
-WORKDIR /app
+WORKDIR /build
 
-# Copy parent POM and common module
-COPY ../pom.xml ./pom.xml
-COPY ../vision-common ./vision-common
+COPY pom.xml .
+COPY vision-common vision-common
+COPY vision-user vision-user
 
-# Copy service
-COPY ./${service} ./${service}
-
-# Build
-WORKDIR /app/${service}
-RUN mvn clean package -DskipTests
+RUN cd vision-common && mvn clean install -DskipTests
+RUN cd vision-user && mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-
-COPY --from=build /app/${service}/target/*.jar app.jar
-
+COPY --from=build /build/vision-user/target/*.jar app.jar
 EXPOSE 8082
-
 ENTRYPOINT ["java", "-jar", "app.jar"]

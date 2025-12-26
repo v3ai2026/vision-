@@ -1,6 +1,20 @@
 version: '3.8'
 
 services:
+  # Frontend Application
+  frontend:
+    build:
+      context: ../
+      dockerfile: Dockerfile.frontend
+    container_name: vision-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - blade-gateway
+    networks:
+      - vision-network
+    restart: unless-stopped
+
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine

@@ -20,6 +20,9 @@ export default defineConfig(({ mode }) => {
         }
       },
       build: {
+        outDir: 'dist',
+        sourcemap: false,
+        minify: 'terser',
         rollupOptions: {
           output: {
             manualChunks: (id) => {
@@ -42,6 +45,10 @@ export default defineConfig(({ mode }) => {
                   id.includes('node_modules/framer-motion')) {
                 return 'ui-vendor';
               }
+              // Google Generative AI
+              if (id.includes('node_modules/@google/genai')) {
+                return 'ai-vendor';
+              }
               // Ads system (local modules)
               if (id.includes('/services/ads/')) {
                 return 'ads';
@@ -50,7 +57,13 @@ export default defineConfig(({ mode }) => {
             }
           }
         },
-        chunkSizeWarningLimit: 600,
+        chunkSizeWarningLimit: 1000,
+        terserOptions: {
+          compress: {
+            drop_console: true,
+            drop_debugger: true
+          }
+        }
       }
     };
 });

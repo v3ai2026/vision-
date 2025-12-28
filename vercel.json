@@ -1,7 +1,22 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "npm install",
   "framework": "vite",
-  "devCommand": "npm run dev"
+  "devCommand": "npm run dev",
+  "env": {
+    "VITE_GEMINI_API_KEY": "@gemini_api_key",
+    "VITE_SUPABASE_URL": "@supabase_url",
+    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key",
+    "VITE_STRIPE_PUBLISHABLE_KEY": "@stripe_publishable_key",
+    "VITE_STRIPE_PRO_PRICE_ID": "@stripe_pro_price_id",
+    "VITE_STRIPE_ENTERPRISE_PRICE_ID": "@stripe_enterprise_price_id"
+  },
+  "regions": ["iad1"],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from './hooks/useAuth';
 import { NeuralSpinner, NeuralBadge } from './components/UIElements';
@@ -38,7 +38,7 @@ const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/admin/login" replace />;
   }
 
   return <>{children}</>;
@@ -57,7 +57,7 @@ const AuthPage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return (
@@ -74,13 +74,13 @@ const Sidebar: React.FC = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const navItems = [
-    { path: '/dashboard', icon: '📊', label: 'Dashboard' },
-    { path: '/projects', icon: '📁', label: 'Projects' },
-    { path: '/teams', icon: '👥', label: 'Teams' },
-    { path: '/billing', icon: '💳', label: 'Billing' },
-    { path: '/api-keys', icon: '🔑', label: 'API Keys' },
-    { path: '/profile', icon: '👤', label: 'Profile' },
-    { path: '/settings', icon: '⚙️', label: 'Settings' },
+    { path: '/admin/dashboard', icon: '📊', label: 'Dashboard' },
+    { path: '/admin/projects', icon: '📁', label: 'Projects' },
+    { path: '/admin/teams', icon: '👥', label: 'Teams' },
+    { path: '/admin/billing', icon: '💳', label: 'Billing' },
+    { path: '/admin/api-keys', icon: '🔑', label: 'API Keys' },
+    { path: '/admin/profile', icon: '👤', label: 'Profile' },
+    { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
   ];
 
   return (
@@ -127,7 +127,7 @@ const Sidebar: React.FC = () => {
             <p className="text-xs text-slate-400 mb-2">
               {profile?.ai_credits || 0} AI credits left
             </p>
-            <Link to="/billing">
+            <Link to="/admin/billing">
               <button className="w-full px-3 py-2 rounded-lg bg-[#00DC82] text-black text-xs font-black uppercase tracking-wider hover:bg-[#00DC82]/80 transition-colors">
                 Upgrade
               </button>
@@ -205,103 +205,101 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 export const AdminApp: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          {/* Auth routes */}
-          <Route
-            path="/login"
-            element={
-              <AuthPage>
-                <LoginForm onSuccess={() => {}} />
-              </AuthPage>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <AuthPage>
-                <RegisterForm onSuccess={() => {}} />
-              </AuthPage>
-            }
-          />
+      <Routes>
+        {/* Auth routes */}
+        <Route
+          path="/login"
+          element={
+            <AuthPage>
+              <LoginForm onSuccess={() => {}} />
+            </AuthPage>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <AuthPage>
+              <RegisterForm onSuccess={() => {}} />
+            </AuthPage>
+          }
+        />
 
-          {/* Protected routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <AuthWrapper>
-                <MainLayout>
-                  <Dashboard />
-                </MainLayout>
-              </AuthWrapper>
-            }
-          />
-          <Route
-            path="/projects"
-            element={
-              <AuthWrapper>
-                <MainLayout>
-                  <Projects />
-                </MainLayout>
-              </AuthWrapper>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <AuthWrapper>
-                <MainLayout>
-                  <Profile />
-                </MainLayout>
-              </AuthWrapper>
-            }
-          />
-          <Route
-            path="/billing"
-            element={
-              <AuthWrapper>
-                <MainLayout>
-                  <Billing />
-                </MainLayout>
-              </AuthWrapper>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <AuthWrapper>
-                <MainLayout>
-                  <Settings />
-                </MainLayout>
-              </AuthWrapper>
-            }
-          />
-          <Route
-            path="/teams"
-            element={
-              <AuthWrapper>
-                <MainLayout>
-                  <Teams />
-                </MainLayout>
-              </AuthWrapper>
-            }
-          />
-          <Route
-            path="/api-keys"
-            element={
-              <AuthWrapper>
-                <MainLayout>
-                  <ApiKeys />
-                </MainLayout>
-              </AuthWrapper>
-            }
-          />
+        {/* Protected routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <AuthWrapper>
+              <MainLayout>
+                <Dashboard />
+              </MainLayout>
+            </AuthWrapper>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <AuthWrapper>
+              <MainLayout>
+                <Projects />
+              </MainLayout>
+            </AuthWrapper>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <AuthWrapper>
+              <MainLayout>
+                <Profile />
+              </MainLayout>
+            </AuthWrapper>
+          }
+        />
+        <Route
+          path="/billing"
+          element={
+            <AuthWrapper>
+              <MainLayout>
+                <Billing />
+              </MainLayout>
+            </AuthWrapper>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <AuthWrapper>
+              <MainLayout>
+                <Settings />
+              </MainLayout>
+            </AuthWrapper>
+          }
+        />
+        <Route
+          path="/teams"
+          element={
+            <AuthWrapper>
+              <MainLayout>
+                <Teams />
+              </MainLayout>
+            </AuthWrapper>
+          }
+        />
+        <Route
+          path="/api-keys"
+          element={
+            <AuthWrapper>
+              <MainLayout>
+                <ApiKeys />
+              </MainLayout>
+            </AuthWrapper>
+          }
+        />
 
-          {/* Default redirect */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
+        {/* Default redirect */}
+        <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+      </Routes>
     </QueryClientProvider>
   );
 };

@@ -1,22 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import App from './App'; // Original AI Studio
 import { AdminApp } from './AdminApp'; // New Admin System
 import { NeuralButton } from './components/UIElements';
 
 export const RootApp: React.FC = () => {
-  // Check URL parameter to decide which app to show
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialMode = urlParams.get('mode') === 'studio' ? 'studio' : 'admin';
-  const [appMode, setAppMode] = useState<'studio' | 'admin'>(initialMode);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const isStudioMode = location.pathname === '/' || location.pathname === '/studio';
 
   const toggleMode = () => {
-    const newMode = appMode === 'studio' ? 'admin' : 'studio';
-    setAppMode(newMode);
-    
-    // Update URL without reload
-    const url = new URL(window.location.href);
-    url.searchParams.set('mode', newMode);
-    window.history.pushState({}, '', url);
+    if (isStudioMode) {
+      navigate('/admin');
+    } else {
+      navigate('/studio');
+    }
   };
 
   return (
@@ -29,12 +28,17 @@ export const RootApp: React.FC = () => {
           size="sm"
           className="shadow-2xl"
         >
-          {appMode === 'studio' ? '🎛️ Admin' : '✨ Studio'}
+          {isStudioMode ? '🎛️ Admin' : '✨ Studio'}
         </NeuralButton>
       </div>
 
-      {/* Render the selected app */}
-      {appMode === 'studio' ? <App /> : <AdminApp />}
+      {/* Routes */}
+      <Routes>
+        <Route path="/" element={<App />} />
+        <Route path="/studio" element={<App />} />
+        <Route path="/admin/*" element={<AdminApp />} />
+        <Route path="*" element={<App />} />
+      </Routes>
     </>
   );
 };

@@ -5,7 +5,8 @@
   "type": "module",
   "overrides": {
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "three-mesh-bvh": "^0.9.0"
   },
   "scripts": {
     "dev": "vite",

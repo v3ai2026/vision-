@@ -1,7 +1,9 @@
 {
-  "name": "visioncommerce",
+  "name": "novaui",
   "private": true,
   "version": "1.0.0",
+  "description": "NovaUI - Enterprise-grade AI-powered Full-Stack Development Platform",
+  "keywords": ["novaui", "ai", "code-generation", "full-stack", "react", "spring-boot"],
   "type": "module",
   "overrides": {
     "react": "^19.2.3",

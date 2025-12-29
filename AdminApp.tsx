@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from './hooks/useAuth';
 import { NeuralSpinner, NeuralBadge } from './components/UIElements';
@@ -12,6 +12,7 @@ import { Billing } from './pages/Billing';
 import { Settings } from './pages/Settings';
 import { Teams } from './pages/Teams';
 import { ApiKeys } from './pages/ApiKeys';
+import { NotFound } from './pages/NotFound';
 import { LoginForm } from './components/auth/LoginForm';
 import { RegisterForm } from './components/auth/RegisterForm';
 
@@ -90,10 +91,10 @@ const Sidebar: React.FC = () => {
         <div className="p-6 border-b border-[#1a1e43]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-nuxt-gradient flex items-center justify-center text-black font-black text-xl">
-              A
+              N
             </div>
             <div>
-              <h2 className="text-lg font-black text-white">Admin Panel</h2>
+              <h2 className="text-lg font-black text-white">NovaUI Admin</h2>
               <p className="text-xs text-slate-500">{profile?.full_name}</p>
             </div>
           </div>
@@ -140,9 +141,9 @@ const Sidebar: React.FC = () => {
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[#020420]/95 backdrop-blur-xl border-b border-[#1a1e43] z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-nuxt-gradient flex items-center justify-center text-black font-black">
-            A
+            N
           </div>
-          <span className="text-sm font-black text-white">Admin Panel</span>
+          <span className="text-sm font-black text-white">NovaUI Admin</span>
         </div>
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
@@ -205,8 +206,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 export const AdminApp: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
+      <Routes>
           {/* Auth routes */}
           <Route
             path="/login"
@@ -299,9 +299,8 @@ export const AdminApp: React.FC = () => {
 
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
     </QueryClientProvider>
   );
 };

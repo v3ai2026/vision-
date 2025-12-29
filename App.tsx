@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { generateFullStackProject, convertToColabNotebook, transcribeAudio, generateSpeech } from './services/geminiService';
 import { FigmaService } from './services/figmaService';
@@ -19,13 +19,14 @@ import {
 import { GeneratedFile, TabType, ModelConfig, GenerationResult, AIAgent, DeploymentStatus } from './types';
 import { UnifiedAdsService } from './services/ads/unifiedAdsService';
 import { AICopywritingService } from './services/ads/aiCopywritingService';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Lazy load heavy components for better performance
 const Editor = lazy(() => import('@monaco-editor/react'));
 const AdsDashboard = lazy(() => import('./components/ads/AdsDashboard').then(m => ({ default: m.AdsDashboard })));
 const AIAdCreator = lazy(() => import('./components/ads/AIAdCreator').then(m => ({ default: m.AIAdCreator })));
 
-const INITIAL_SYSTEM = `你是一个顶级进化级全栈 AI 编排系统（DeepMind 级架构师）。正在操作分布式代理集群。风格：奢华深色，Nuxt 翠绿。优先移动端适配。`;
+const INITIAL_SYSTEM = `你是 NovaUI，一个顶级进化级全栈 AI 编排系统（DeepMind 级架构师）。正在操作分布式代理集群。风格：奢华深色，Nuxt 翠绿。优先移动端适配。`;
 
 const App: React.FC = () => {
   const [modelConfig, setModelConfig] = useState<ModelConfig>({

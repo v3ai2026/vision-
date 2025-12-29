@@ -4,6 +4,7 @@
  */
 
 import { GoogleGenAI } from "@google/genai";
+import { env } from "../../lib/env";
 
 export interface ChatMessage {
   id: string;
@@ -26,7 +27,7 @@ export class AIChatbotService {
   private conversationHistory: Map<string, ChatMessage[]> = new Map();
 
   constructor(apiKey?: string) {
-    this.ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY });
+    this.ai = new GoogleGenAI({ apiKey: apiKey || env.GEMINI_API_KEY });
   }
 
   async chat(

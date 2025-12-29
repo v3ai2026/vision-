@@ -5,6 +5,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { AdType, AdPlatform } from "../../types";
+import { env } from "../../lib/env";
 
 export interface CopywritingInput {
   productName: string;
@@ -28,7 +29,7 @@ export class AICopywritingService {
   private ai: GoogleGenAI;
 
   constructor(apiKey?: string) {
-    this.ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY });
+    this.ai = new GoogleGenAI({ apiKey: apiKey || env.GEMINI_API_KEY });
   }
 
   async generateAdCopy(input: CopywritingInput): Promise<GeneratedCopy> {

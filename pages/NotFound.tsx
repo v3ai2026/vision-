@@ -1,8 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { NeuralButton } from '../components/UIElements';
 
 export const NotFound: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-[#020420] flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center space-y-8">
@@ -20,16 +22,12 @@ export const NotFound: React.FC = () => {
         
         {/* Action Buttons */}
         <div className="flex gap-4 justify-center">
-          <Link to="/dashboard">
-            <NeuralButton variant="primary">
-              🏠 Back to Dashboard
-            </NeuralButton>
-          </Link>
-          <Link to="/">
-            <NeuralButton variant="secondary">
-              ✨ AI Studio
-            </NeuralButton>
-          </Link>
+          <NeuralButton variant="primary" onClick={() => navigate(-1)}>
+            ← Go Back
+          </NeuralButton>
+          <NeuralButton variant="secondary" onClick={() => navigate('/')}>
+            🏠 Home
+          </NeuralButton>
         </div>
       </div>
     </div>

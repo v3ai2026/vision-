@@ -1,5 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
+import { env } from "../lib/env";
 
 export interface ScrapeResult {
   summary: string;
@@ -12,7 +13,7 @@ export interface ScrapeResult {
  * and synthesize web data for the Studio Agent OS.
  */
 export const performNeuralCrawl = async (query: string): Promise<ScrapeResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview", // Grounding is most effective here

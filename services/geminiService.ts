@@ -1,8 +1,9 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { GenerationResult, LibraryItem, ModelConfig, GeneratedFile } from "../types";
+import { env } from "../lib/env";
 
-const DEFAULT_SYSTEM_INSTRUCTION = `你是一个顶级进化级全栈 AI 编排系统（IntelliBuild Studio Core）。
+const DEFAULT_SYSTEM_INSTRUCTION = `你是一个顶级进化级全栈 AI 编排系统（NovaUI Core）。
 你的核心开发准则是：
 
 1. 【极致无障碍与语义化 (A11y-First & Semantic HTML)】：这是最高优先级，不可妥协。
@@ -42,7 +43,7 @@ export const generateFullStackProject = async (
   contextShards: string[] = [],
   images: { data: string, mimeType: string }[] = []
 ): Promise<GenerationResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const libraryContext = customLibrary.map(item => `- ${item.name}: ${item.description}`).join('\n');
   const vaultContext = contextShards.join('\n\n');
 
@@ -124,7 +125,7 @@ Technical Protocols (MANDATORY):
 };
 
 export const transcribeAudio = async (base64Audio: string, mimeType: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: [
@@ -140,7 +141,7 @@ export const transcribeAudio = async (base64Audio: string, mimeType: string): Pr
 };
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
     contents: [{ parts: [{ text: `Say this: ${text}` }] }],

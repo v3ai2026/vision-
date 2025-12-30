@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App'; // Original AI Studio
 import { AdminApp } from './AdminApp'; // New Admin System
 import { NeuralButton } from './components/UIElements';
@@ -20,7 +21,7 @@ export const RootApp: React.FC = () => {
   };
 
   return (
-    <>
+    <BrowserRouter>
       {/* App Toggle Button - Fixed position */}
       <div className="fixed top-4 right-4 z-[9999]">
         <NeuralButton
@@ -35,7 +36,7 @@ export const RootApp: React.FC = () => {
 
       {/* Render the selected app */}
       {appMode === 'studio' ? <App /> : <AdminApp />}
-    </>
+    </BrowserRouter>
   );
 };
 

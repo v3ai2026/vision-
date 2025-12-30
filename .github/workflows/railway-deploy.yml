@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     strategy:
+      fail-fast: false
       matrix:
         service:
           - blade-gateway
@@ -65,9 +66,15 @@ jobs:
     steps:
       - name: Notify deployment status
         run: |
+          echo "📊 Deployment Summary:"
+          echo "Frontend: ${{ needs.deploy-frontend.result }}"
+          echo "Backend: ${{ needs.deploy-backend.result }}"
+          
           if [ "${{ needs.deploy-frontend.result }}" == "success" ] && [ "${{ needs.deploy-backend.result }}" == "success" ]; then
             echo "✅ All services deployed successfully!"
+          elif [ "${{ needs.deploy-frontend.result }}" == "success" ] || [ "${{ needs.deploy-backend.result }}" == "success" ]; then
+            echo "⚠️  Partial deployment completed. Some services may have failed."
           else
-            echo "❌ Some services failed to deploy. Check the logs above."
+            echo "❌ Deployment failed. Check the logs above for details."
             exit 1
           fi

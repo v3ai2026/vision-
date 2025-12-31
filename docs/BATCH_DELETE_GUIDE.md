@@ -109,7 +109,7 @@ The script will:
 ======================================================================
 
 ✅ GitHub CLI is installed
-✅ Authenticated as v3ai2026
+✅ Authenticated as your-username
 ✅ Found 73 repositories
 
 ======================================================================
@@ -160,23 +160,23 @@ Type 'DELETE' (in capitals) to confirm deletion of 68 repositories:
 ### List Repositories Without Deleting
 
 ```bash
-gh repo list v3ai2026 --limit 200 --json name,description,stargazerCount
+gh repo list {username} --limit 200 --json name,description,stargazerCount
 ```
 
 ### Delete Single Repository
 
 ```bash
-gh repo delete v3ai2026/repo-name --yes
+gh repo delete {username}/repo-name --yes
 ```
 
 ### Export Repository List
 
 ```bash
 # JSON format
-gh repo list v3ai2026 --limit 200 --json name,description > repos.json
+gh repo list {username} --limit 200 --json name,description > repos.json
 
 # Simple list
-gh repo list v3ai2026 --limit 200 --json name --jq '.[].name' > repos.txt
+gh repo list {username} --limit 200 --json name --jq '.[].name' > repos.txt
 ```
 
 ## 🔍 Troubleshooting
@@ -209,7 +209,7 @@ If you want to preserve repository history:
 
 ```bash
 # Archive a repository (makes it read-only)
-gh repo archive v3ai2026/repo-name
+gh repo archive {username}/repo-name
 ```
 
 ### Backup Before Deletion
@@ -218,8 +218,8 @@ Consider cloning important repositories before deletion:
 
 ```bash
 # Clone all repos for backup
-gh repo list v3ai2026 --limit 200 --json name --jq '.[].name' | \
-  xargs -I {} git clone https://github.com/v3ai2026/{}.git backups/{}
+gh repo list {username} --limit 200 --json name --jq '.[].name' | \
+  xargs -I {} git clone https://github.com/{username}/{}.git backups/{}
 ```
 
 ## 📝 Best Practices
@@ -237,7 +237,7 @@ Always keep repositories that:
 ### 3. Archive Instead of Delete
 For old projects with historical value, use archive instead:
 ```bash
-gh repo archive v3ai2026/old-project
+gh repo archive {username}/old-project
 ```
 
 ### 4. Export Data First
@@ -257,7 +257,7 @@ If you accidentally delete a repository:
 
 - GitHub CLI docs: https://cli.github.com/manual/
 - GitHub Support: https://support.github.com/
-- Repository Issues: https://github.com/v3ai2026/vision-/issues
+- Repository Issues: https://github.com/{your-username}/vision-/issues
 
 ## 🎯 Common Scenarios
 
@@ -283,4 +283,4 @@ $reposToKeep = $allRepos | Where-Object { $_.stargazerCount -gt 0 }
 
 **Created:** 2025-12-31  
 **Version:** 1.0.0  
-**Maintained by:** v3ai2026
+**License:** MIT

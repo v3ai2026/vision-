@@ -148,14 +148,13 @@ foreach ($repo in $reposToDelete) {
     
     try {
         # Attempt deletion
-        $result = gh repo delete $repoFullName --yes 2>&1
+        gh repo delete $repoFullName --yes 2>&1 | Out-Null
         
         if ($LASTEXITCODE -eq 0) {
             Write-Success "  ✅ Successfully deleted: $($repo.name)"
             $successCount++
         } else {
             Write-Error "  ❌ Failed to delete: $($repo.name)"
-            Write-Host "     Error: $result" -ForegroundColor Red
             $failCount++
         }
         

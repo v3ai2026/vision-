@@ -14,12 +14,14 @@
 # Example: export GITHUB_USER="your-username"
 GITHUB_USER="${GITHUB_USER:-your-username-here}"
 KEEP_REPOS=(
-    "vision-"        # Main project - always keep
-    # Add 4 more repositories you want to keep below:
-    # "important-repo-1"
-    # "important-repo-2"
-    # "important-repo-3"
-    # "important-repo-4"
+    "vision-"        # Main frontend project
+    "nova"           # Nova project (新星)
+    "v3aihub"        # V3AI Hub
+    "vision-AI"      # Backend project (视觉人工智能)
+    "v3ai.xin"       # V3AI website
+    "saas-starter"   # SaaS starter template
+    # Edit above to change which 6 repositories to keep
+    # All other repositories will be deleted
 )
 
 # Color codes

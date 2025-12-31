@@ -57,7 +57,7 @@ images:
 # Build configuration options
 options:
   # Use a machine with more resources for faster builds
-  machineType: 'N1_HIGHCPU_8'
+  machineType: 'E2_HIGHCPU_8'
   # Increase timeout for npm install
   timeout: '1200s'
   # Log streaming

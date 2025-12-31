@@ -28,9 +28,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Expose port 8080 (Cloud Run default)
 EXPOSE 8080
 
-# Health check
+# Health check (using curl which is available in nginx:alpine)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:8080/ || exit 1
+  CMD curl -f http://localhost:8080/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

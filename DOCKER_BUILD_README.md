@@ -36,7 +36,7 @@ Google Cloud Build configuration that fixes the image naming issue:
 
 The original deployment was failing with this error:
 ```
-invalid argument "us-west1-docker.pkg.dev/gen-lang-client-0654563230/cloud-run-source-deploy/vision-/intellibuild-studio-prime:35b398153f728551923805d62e419c60c2d46984" for "-t, --tag" flag: invalid reference format
+invalid argument "us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/vision-/...:$COMMIT_SHA" for "-t, --tag" flag: invalid reference format
 ```
 
 This was caused by the repository name `vision-` ending with a dash, which violates Docker image naming conventions. The solution uses a fixed image name `novaui` (from package.json) instead.

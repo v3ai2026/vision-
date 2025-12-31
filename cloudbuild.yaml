@@ -1,15 +1,16 @@
 # Google Cloud Build configuration for NovaUI deployment
-# This configuration fixes the Docker image naming issue by using 'novaui' instead of 'vision-'
+# Fixed configuration for europe-west1 region deployment
 
 steps:
   # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--no-cache'
       - '-t'
-      - 'us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:$COMMIT_SHA'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:$COMMIT_SHA'
       - '-t'
-      - 'us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:latest'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:latest'
       - '-f'
       - 'Dockerfile'
       - '.'
@@ -19,7 +20,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:$COMMIT_SHA'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:$COMMIT_SHA'
     id: 'push-image-sha'
     waitFor: ['build-image']
     
@@ -27,41 +28,53 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:latest'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:latest'
     id: 'push-image-latest'
     waitFor: ['build-image']
 
-  # Step 4: Deploy to Cloud Run (optional, uncomment to enable automatic deployment)
-  # - name: 'gcr.io/cloud-builders/gcloud'
-  #   args:
-  #     - 'run'
-  #     - 'deploy'
-  #     - 'novaui'
-  #     - '--image'
-  #     - 'us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:$COMMIT_SHA'
-  #     - '--region'
-  #     - 'us-west1'
-  #     - '--platform'
-  #     - 'managed'
-  #     - '--port'
-  #     - '8080'
-  #     - '--allow-unauthenticated'
-  #   id: 'deploy-cloud-run'
-  #   waitFor: ['push-image-sha']
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'novaui'
+      - '--image'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:$COMMIT_SHA'
+      - '--region'
+      - 'europe-west1'
+      - '--platform'
+      - 'managed'
+      - '--port'
+      - '8080'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--max-instances'
+      - '10'
+      - '--min-instances'
+      - '0'
+      - '--timeout'
+      - '300s'
+    id: 'deploy-cloud-run'
+    waitFor: ['push-image-sha']
 
 # Images to be pushed to Artifact Registry
 images:
-  - 'us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:$COMMIT_SHA'
-  - 'us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:latest'
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:$COMMIT_SHA'
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/novaui:latest'
 
 # Build configuration options
 options:
   # Use a machine with more resources for faster builds
   machineType: 'E2_HIGHCPU_8'
-  # Increase timeout for npm install
-  timeout: '1200s'
+  # Increase timeout for npm install and build
+  timeout: '1800s'
   # Log streaming
   logging: CLOUD_LOGGING_ONLY
+  # Disk size for build
+  diskSizeGb: 100
 
-# Timeout for the entire build
+# Timeout for the entire build (30 minutes)
 timeout: '1800s'

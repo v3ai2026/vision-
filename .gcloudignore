@@ -1,0 +1,71 @@
+# Git files
+.git
+.gitignore
+
+# Node.js
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+dist-ssr/
+build/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*.suo
+*.user
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Documentation (exclude from build)
+README.md
+*.md
+docs/
+
+# Tests
+tests/
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# CI/CD
+.github/
+
+# Backend (separate deployment)
+backend/
+server/
+
+# Scripts
+scripts/
+*.bat
+*.sh
+*.ps1
+
+# Other build configs
+.vercelignore
+railway.json
+railway-template.yml
+docker-compose.yml
+Dockerfile.frontend

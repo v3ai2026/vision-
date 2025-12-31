@@ -7,6 +7,112 @@
 - 📦 **65个新文件** 已添加（组件、页面、Hooks、文档、脚本）
 - 🏗️ **构建成功** - 1.84秒，538KB，0漏洞
 - 🎨 **所有5个PR的功能** 都在这里，无需去其他地方下载
+- ☁️ **Google Cloud Run** 部署配置已修复
+
+---
+
+## ☁️ Google Cloud Run 部署
+
+### 当前配置
+- **Project ID**: gen-lang-client-0654563230
+- **Region**: europe-west1
+- **Service Name**: novaui
+- **Port**: 8080
+- **Memory**: 512Mi
+- **CPU**: 1
+- **Max Instances**: 10
+- **Min Instances**: 0
+
+### 自动部署（推荐）
+
+每次推送到 `main` 分支会自动触发：
+1. 构建 Docker 镜像
+2. 推送到 Artifact Registry
+3. 部署到 Cloud Run
+
+监控构建：https://console.cloud.google.com/cloud-build/builds
+
+### 手动部署
+
+#### 方法 1: 使用 gcloud CLI
+
+```bash
+# 1. 认证
+gcloud auth login
+gcloud config set project gen-lang-client-0654563230
+
+# 2. 构建并推送镜像
+docker build -t europe-west1-docker.pkg.dev/gen-lang-client-0654563230/cloud-run-source-deploy/novaui:latest .
+docker push europe-west1-docker.pkg.dev/gen-lang-client-0654563230/cloud-run-source-deploy/novaui:latest
+
+# 3. 部署到 Cloud Run
+gcloud run deploy novaui \
+  --image europe-west1-docker.pkg.dev/gen-lang-client-0654563230/cloud-run-source-deploy/novaui:latest \
+  --region europe-west1 \
+  --platform managed \
+  --port 8080 \
+  --allow-unauthenticated \
+  --memory 512Mi \
+  --cpu 1
+```
+
+#### 方法 2: 使用 Cloud Build
+
+```bash
+# 提交到 Cloud Build
+gcloud builds submit --config cloudbuild.yaml
+```
+
+### 环境变量配置
+
+在 Cloud Run 中设置环境变量：
+
+```bash
+gcloud run services update novaui \
+  --region europe-west1 \
+  --update-env-vars "VITE_GEMINI_API_KEY=your_key_here"
+```
+
+或在 Cloud Console 中：
+1. 访问 Cloud Run 服务页面
+2. 点击 "EDIT & DEPLOY NEW REVISION"
+3. 在 "Variables & Secrets" 标签页添加环境变量
+
+### 故障排除
+
+#### "invalid reference format" 错误
+- ✅ 已修复：使用 `novaui` 作为服务名
+- ✅ 已修复：区域改为 `europe-west1`
+
+#### 权限错误
+确保 Cloud Build 服务账号有以下权限：
+- Cloud Run Admin
+- Service Account User
+- Artifact Registry Writer
+
+```bash
+# 授予权限（替换 PROJECT_NUMBER）
+gcloud projects add-iam-policy-binding gen-lang-client-0654563230 \
+  --member serviceAccount:PROJECT_NUMBER@cloudbuild.gserviceaccount.com \
+  --role roles/run.admin
+
+gcloud projects add-iam-policy-binding gen-lang-client-0654563230 \
+  --member serviceAccount:PROJECT_NUMBER@cloudbuild.gserviceaccount.com \
+  --role roles/iam.serviceAccountUser
+```
+
+### 查看部署状态
+
+```bash
+# 列出服务
+gcloud run services list --region europe-west1
+
+# 查看服务详情
+gcloud run services describe novaui --region europe-west1
+
+# 查看日志
+gcloud run services logs read novaui --region europe-west1
+```
 
 ---
 

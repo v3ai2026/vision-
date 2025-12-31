@@ -52,6 +52,18 @@ if ! command -v gh &> /dev/null; then
 fi
 print_success "✅ GitHub CLI is installed"
 
+# Check if jq is installed
+print_info "Checking jq installation..."
+if ! command -v jq &> /dev/null; then
+    print_error "❌ jq not found! jq is required for JSON parsing."
+    print_warning "Install it:"
+    print_warning "  Mac: brew install jq"
+    print_warning "  Ubuntu/Debian: sudo apt install jq"
+    print_warning "  Other: https://stedolan.github.io/jq/download/"
+    exit 1
+fi
+print_success "✅ jq is installed"
+
 # Check authentication
 print_info "Checking GitHub authentication..."
 if ! gh auth status &> /dev/null; then

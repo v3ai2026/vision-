@@ -22,13 +22,21 @@ Or download from: https://cli.github.com/
 
 #### Mac
 ```bash
-brew install gh
+brew install gh jq
 ```
 
 #### Linux (Ubuntu/Debian)
 ```bash
-sudo apt install gh
+# Add GitHub CLI repository
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+
+# Install GitHub CLI and jq
+sudo apt update
+sudo apt install gh jq
 ```
+
+For other Linux distributions, see: https://github.com/cli/cli/blob/trunk/docs/install_linux.md
 
 ### 2. Authentication
 
@@ -190,6 +198,12 @@ gh repo list {username} --limit 200 --json name --jq '.[].name' > repos.txt
 
 ### "GitHub CLI not found"
 Install GitHub CLI from https://cli.github.com/
+
+### "jq not found"
+Install jq for JSON parsing:
+- **Mac**: `brew install jq`
+- **Ubuntu/Debian**: `sudo apt install jq`
+- **Other**: https://stedolan.github.io/jq/download/
 
 ### "Not authenticated"
 Run: `gh auth login`

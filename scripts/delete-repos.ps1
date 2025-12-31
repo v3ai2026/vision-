@@ -11,8 +11,9 @@
 #>
 
 # Configuration - Edit these to specify which repositories to keep
-# Set GITHUB_USER via environment variable or edit below
-$GITHUB_USER = if ($env:GITHUB_USER) { $env:GITHUB_USER } else { "v3ai2026" }
+# REQUIRED: Set GITHUB_USER environment variable before running
+# Example: $env:GITHUB_USER = "your-username"
+$GITHUB_USER = if ($env:GITHUB_USER) { $env:GITHUB_USER } else { "your-username-here" }
 $KEEP_REPOS = @(
     "vision-"        # Main project - always keep
     # Add 4 more repositories you want to keep below:

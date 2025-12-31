@@ -40,7 +40,20 @@ Follow the prompts to authenticate with your GitHub account.
 
 ## 🚀 Quick Start
 
-### Step 1: Configure Which Repositories to Keep
+### Step 1: Configure GitHub Username and Repositories
+
+**Set your GitHub username (required):**
+```bash
+# Windows PowerShell
+$env:GITHUB_USER = "your-username"
+
+# Mac/Linux
+export GITHUB_USER="your-username"
+```
+
+Alternatively, edit the script files directly to set `GITHUB_USER`.
+
+**Configure which repositories to keep:**
 
 Edit the script for your platform:
 
@@ -64,12 +77,6 @@ KEEP_REPOS=(
     "important-repo-3"
     "important-repo-4"
 )
-```
-
-**Optional: Set GitHub Username via Environment Variable**
-```bash
-# Instead of editing the script, set GITHUB_USER environment variable
-export GITHUB_USER="your-username"
 ```
 
 ### Step 2: Run the Script
@@ -257,7 +264,7 @@ If you accidentally delete a repository:
 
 - GitHub CLI docs: https://cli.github.com/manual/
 - GitHub Support: https://support.github.com/
-- Repository Issues: https://github.com/{your-username}/vision-/issues
+- Repository Issues: https://github.com/{your-username}/{your-repo}/issues
 
 ## 🎯 Common Scenarios
 

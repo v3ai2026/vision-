@@ -43,6 +43,10 @@ export const generateFullStackProject = async (
   contextShards: string[] = [],
   images: { data: string, mimeType: string }[] = []
 ): Promise<GenerationResult> => {
+  if (!prompt || prompt.trim().length === 0) {
+    throw new Error('Prompt cannot be empty');
+  }
+
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const libraryContext = customLibrary.map(item => `- ${item.name}: ${item.description}`).join('\n');
   const vaultContext = contextShards.join('\n\n');
@@ -121,10 +125,28 @@ Technical Protocols (MANDATORY):
     config: genConfig
   });
 
-  return JSON.parse(response.text || '{}') as GenerationResult;
+  const text = response.text;
+  if (!text) {
+    throw new Error('No response from AI model');
+  }
+
+  try {
+    const parsed = JSON.parse(text) as GenerationResult;
+    if (!parsed.projectName || !parsed.files || !Array.isArray(parsed.files)) {
+      throw new Error('Invalid response structure from AI model');
+    }
+    return parsed;
+  } catch (parseError) {
+    console.error('Failed to parse AI response:', parseError);
+    throw new Error('Invalid JSON response from AI model');
+  }
 };
 
 export const transcribeAudio = async (base64Audio: string, mimeType: string): Promise<string> => {
+  if (!base64Audio || !mimeType) {
+    throw new Error('Invalid audio data');
+  }
+
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
@@ -141,6 +163,10 @@ export const transcribeAudio = async (base64Audio: string, mimeType: string): Pr
 };
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
+  if (!text || text.trim().length === 0) {
+    throw new Error('Text cannot be empty');
+  }
+
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",

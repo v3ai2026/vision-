@@ -50,6 +50,10 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Memoize services to prevent re-creation on every render
+  const adsServiceInstance = useMemo(() => new UnifiedAdsService(), []);
+  const copywritingServiceInstance = useMemo(() => new AICopywritingService(), []);
+
   // Builder Specific State
   const [builderMode, setBuilderMode] = useState<'CHOOSING' | 'ARCHITECT' | 'INSTANT'>('CHOOSING');
   const [architectType, setArchitectType] = useState<'SaaS' | 'ECommerce' | 'Portfolio' | 'Marketplace'>('SaaS');
@@ -99,19 +103,17 @@ const App: React.FC = () => {
   const audioChunksRef = useRef<Blob[]>([]);
 
   // Advertising System State
-  const [adsService] = useState(() => new UnifiedAdsService());
-  const [copywritingService] = useState(() => new AICopywritingService());
   const [adsView, setAdsView] = useState<'dashboard' | 'create'>('dashboard');
   const [adsInitialized, setAdsInitialized] = useState(false);
 
   // Initialize ads system with mock data on first load
   useEffect(() => {
     if (!adsInitialized && activeTab === TabType.MEDIA_ADS) {
-      adsService.seedMockData().then(() => {
+      adsServiceInstance.seedMockData().then(() => {
         setAdsInitialized(true);
       });
     }
-  }, [activeTab, adsInitialized]);
+  }, [activeTab, adsInitialized, adsServiceInstance]);
 
   const startRecording = async () => {
     try {
@@ -132,10 +134,18 @@ const App: React.FC = () => {
       };
       recorder.start();
       setIsRecording(true);
-    } catch (e) { console.error("Mic access failed", e); }
+    } catch (error) { 
+      console.error("Mic access failed:", error);
+      alert("Failed to access microphone. Please check your browser permissions.");
+    }
   };
 
-  const stopRecording = () => { mediaRecorderRef.current?.stop(); setIsRecording(false); };
+  const stopRecording = () => { 
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false); 
+  };
 
   const handleGenerate = useCallback(async (overriddenPrompt?: string) => {
     const finalPrompt = overriddenPrompt || input;
@@ -160,7 +170,12 @@ const App: React.FC = () => {
         setSelectedFile(result.files[0]); 
         setActiveTab(TabType.EDITOR); 
       }
-    } catch (e) { console.error(e); } finally { setIsGenerating(false); }
+    } catch (error) { 
+      console.error('Generation error:', error);
+      alert('Failed to generate project. Please try again.');
+    } finally { 
+      setIsGenerating(false); 
+    }
   }, [input, modelConfig, useDeepReasoning, figmaExportedImages, figmaFileData, selectedFigmaNodes]);
 
   const executeArchitectBuild = useCallback(() => {
@@ -181,7 +196,12 @@ const App: React.FC = () => {
           if (updated.state === 'READY' || updated.state === 'ERROR') clearInterval(poll);
         }, 5000);
       }
-    } catch (e: any) { alert(e.message); } finally { setIsDeploying(false); }
+    } catch (error: any) { 
+      console.error('Deployment error:', error);
+      alert(error?.message || 'Deployment failed. Please try again.');
+    } finally { 
+      setIsDeploying(false); 
+    }
   }, [vercelToken, generationResult]);
 
   // GCS Handlers
@@ -192,8 +212,12 @@ const App: React.FC = () => {
       const gcs = new GCSService(gcsToken);
       const buckets = await gcs.listBuckets(gcsProjectId);
       setGcsBuckets(buckets);
-    } catch (e: any) { alert(e.message); }
-    finally { setIsGcsLoading(false); }
+    } catch (error: any) { 
+      console.error('GCS connection error:', error);
+      alert(error?.message || 'Failed to connect to GCS. Please check your credentials.');
+    } finally { 
+      setIsGcsLoading(false); 
+    }
   };
 
   const handleSelectBucket = async (bucketName: string) => {
@@ -203,8 +227,12 @@ const App: React.FC = () => {
       const gcs = new GCSService(gcsToken);
       const objects = await gcs.listObjects(bucketName);
       setBucketObjects(objects);
-    } catch (e: any) { alert(e.message); }
-    finally { setIsGcsLoading(false); }
+    } catch (error: any) { 
+      console.error('Bucket loading error:', error);
+      alert(error?.message || 'Failed to load bucket objects.');
+    } finally { 
+      setIsGcsLoading(false); 
+    }
   };
 
   const handleCreateBucket = async () => {
@@ -215,8 +243,12 @@ const App: React.FC = () => {
       await gcs.createBucket(gcsProjectId, newBucketName);
       await handleGcsConnect();
       setNewBucketName('');
-    } catch (e: any) { alert(e.message); }
-    finally { setIsBucketCreating(false); }
+    } catch (error: any) { 
+      console.error('Bucket creation error:', error);
+      alert(error?.message || 'Failed to create bucket.');
+    } finally { 
+      setIsBucketCreating(false); 
+    }
   };
 
   const handleGcsDeploy = async () => {
@@ -227,8 +259,12 @@ const App: React.FC = () => {
       await gcs.uploadProject(selectedBucket, generationResult.files);
       await handleSelectBucket(selectedBucket);
       alert('Project shards successfully synchronized to GCS bucket.');
-    } catch (e: any) { alert(e.message); }
-    finally { setIsGcsLoading(false); }
+    } catch (error: any) { 
+      console.error('GCS deployment error:', error);
+      alert(error?.message || 'Failed to deploy to GCS.');
+    } finally { 
+      setIsGcsLoading(false); 
+    }
   };
 
   const handleDownloadColab = () => {
@@ -253,8 +289,12 @@ const App: React.FC = () => {
       const fileKey = figmaFileUrl.match(/file\/([a-zA-Z0-9]+)/)?.[1] || figmaFileUrl;
       const data = await figma.getFile(fileKey);
       setFigmaFileData(data);
-    } catch (e: any) { alert(e.message); }
-    finally { setIsFigmaLoading(false); }
+    } catch (error: any) { 
+      console.error('Figma sync error:', error);
+      alert(error?.message || 'Failed to sync Figma file. Please check your token and file URL.');
+    } finally { 
+      setIsFigmaLoading(false); 
+    }
   };
 
   const handleExportFigmaNodes = async () => {
@@ -278,8 +318,12 @@ const App: React.FC = () => {
         base64Map[id] = base64;
       }
       setFigmaExportedImages(prev => ({ ...prev, ...base64Map }));
-    } catch (e: any) { alert(e.message); }
-    finally { setIsExportingDesign(false); }
+    } catch (error: any) { 
+      console.error('Figma export error:', error);
+      alert(error?.message || 'Failed to export Figma nodes.');
+    } finally { 
+      setIsExportingDesign(false); 
+    }
   };
 
   const figmaTopLevelNodes = useMemo(() => {
@@ -393,7 +437,7 @@ const App: React.FC = () => {
               {adsView === 'dashboard' ? (
                 <ErrorBoundary>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><NeuralSpinner /></div>}>
-                    <AdsDashboard adsService={adsService} />
+                    <AdsDashboard adsService={adsServiceInstance} />
                   </Suspense>
                 </ErrorBoundary>
               ) : (
@@ -401,8 +445,8 @@ const App: React.FC = () => {
                   <ErrorBoundary>
                     <Suspense fallback={<div className="flex items-center justify-center h-full"><NeuralSpinner /></div>}>
                       <AIAdCreator 
-                        adsService={adsService} 
-                        copywritingService={copywritingService}
+                        adsService={adsServiceInstance} 
+                        copywritingService={copywritingServiceInstance}
                         onCampaignCreated={() => setAdsView('dashboard')}
                       />
                     </Suspense>

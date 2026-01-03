@@ -135,6 +135,9 @@ Technical Protocols (MANDATORY):
     if (!parsed.projectName || !parsed.files || !Array.isArray(parsed.files)) {
       throw new Error('Invalid response structure from AI model');
     }
+    if (parsed.files.length === 0) {
+      throw new Error('AI model returned no files');
+    }
     return parsed;
   } catch (parseError) {
     console.error('Failed to parse AI response:', parseError);

@@ -126,7 +126,7 @@ export const setVercelEnvVars = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Failed to set environment variable ${key}: ${errorData.error?.message || 'Unknown error'}`);
+      throw new Error(`Failed to set environment variable ${key}: ${errorData?.error?.message || 'Unknown error'}`);
     }
   }
 };

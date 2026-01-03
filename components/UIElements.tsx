@@ -13,13 +13,13 @@ export const Container: React.FC<{ children: React.ReactNode; className?: string
 /**
  * GlassCard: A luxury frosted glass container.
  */
-export const GlassCard: React.FC<{ 
+export const GlassCard = React.memo<{ 
   children: React.ReactNode; 
   className?: string; 
   hover?: boolean;
   onClick?: () => void;
   ariaLabel?: string;
-}> = ({ children, className = '', hover = false, onClick, ariaLabel }) => (
+}>(({ children, className = '', hover = false, onClick, ariaLabel }) => (
   <div 
     onClick={onClick}
     aria-label={ariaLabel}
@@ -32,7 +32,7 @@ export const GlassCard: React.FC<{
   >
     {children}
   </div>
-);
+));
 
 /**
  * NeuralButton: High-fidelity button with loading states and luxury gradients.
@@ -137,15 +137,17 @@ export const NeuralTextArea: React.FC<{
 /**
  * SidebarItem: Icon-based navigation item with active/collapsed states.
  */
-export const SidebarItem: React.FC<{
+export const SidebarItem = React.memo<{
   icon: string;
   label: string;
   active: boolean;
   onClick: () => void;
   collapsed?: boolean;
-}> = ({ icon, label, active, onClick, collapsed = false }) => (
+}>(({ icon, label, active, onClick, collapsed = false }) => (
   <button
     onClick={onClick}
+    aria-label={label}
+    aria-current={active ? 'page' : undefined}
     className={`
       flex flex-col items-center justify-center transition-all duration-300
       ${collapsed ? 'w-12 h-12' : 'w-16 h-20'}
@@ -156,7 +158,7 @@ export const SidebarItem: React.FC<{
     {!collapsed && <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>}
     {active && <div className="absolute left-0 w-1 h-6 bg-[#00DC82] rounded-r-full shadow-[0_0_12px_#00DC82]" />}
   </button>
-);
+));
 
 /**
  * NeuralBadge: Small status or classification indicator.

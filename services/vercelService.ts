@@ -11,6 +11,16 @@ export const deployToVercel = async (
   projectName: string,
   envVars: Record<string, string> = {}
 ): Promise<DeploymentStatus> => {
+  if (!files || files.length === 0) {
+    throw new Error('No files to deploy');
+  }
+  if (!vercelToken) {
+    throw new Error('Vercel token is required');
+  }
+  if (!projectName) {
+    throw new Error('Project name is required');
+  }
+
   const name = projectName.toLowerCase().replace(/\s+/g, '-');
 
   // 1. Ensure project-level environment variables are set (optional phase)
@@ -65,11 +75,18 @@ export const deployToVercel = async (
 };
 
 export const checkDeploymentStatus = async (id: string, vercelToken: string): Promise<DeploymentStatus> => {
+  if (!id || !vercelToken) {
+    throw new Error('Deployment ID and token are required');
+  }
+
   const response = await fetch(`https://api.vercel.com/v13/deployments/${id}`, {
     headers: { 'Authorization': `Bearer ${vercelToken}` }
   });
   
-  if (!response.ok) throw new Error('Status Check Failed');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || 'Status Check Failed');
+  }
   
   const data = await response.json();
   return {
@@ -88,8 +105,12 @@ export const setVercelEnvVars = async (
   vercelToken: string,
   envVars: Record<string, string>
 ) => {
+  if (!projectId || !vercelToken) {
+    throw new Error('Project ID and token are required');
+  }
+
   for (const [key, value] of Object.entries(envVars)) {
-    await fetch(`https://api.vercel.com/v9/projects/${projectId}/env`, {
+    const response = await fetch(`https://api.vercel.com/v9/projects/${projectId}/env`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${vercelToken}`,
@@ -102,5 +123,10 @@ export const setVercelEnvVars = async (
         target: ['production', 'preview', 'development']
       })
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Failed to set environment variable ${key}: ${errorData?.error?.message || 'Unknown error'}`);
+    }
   }
 };
